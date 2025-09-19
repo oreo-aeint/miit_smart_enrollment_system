@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "540010873603",
+    "project_id": "miitreg",
+    "storage_bucket": "miitreg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:540010873603:android:5c973ad03efbcf64e69f36",
+        "android_client_info": {
+          "package_name": "com.example.miit_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhVGKLSQ0DOto1KzbNMO7MCf2CPjV92eU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:540010873603:android:878dcaa486c710a5e69f36",
+        "android_client_info": {
+          "package_name": "com.example.studentenrollment"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhVGKLSQ0DOto1KzbNMO7MCf2CPjV92eU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
