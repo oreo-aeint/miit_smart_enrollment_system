@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EnrollmentRequestPage extends StatefulWidget {
   const EnrollmentRequestPage({super.key});
@@ -9,293 +12,344 @@ class EnrollmentRequestPage extends StatefulWidget {
 }
 
 class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with SingleTickerProviderStateMixin {
-  // Tab controller
   late TabController _tabController;
-
-  // Old student requests
-  List<Map<String, dynamic>> oldStudentRequests = [
-    {
-      "name": "Aeint Chit Thu",
-      "rollNo1": "2022-MIIT-CSE-011",
-      "dob": "21.8.2005",
-      "father": "U Chit San Maung",
-      "mother": "Daw Than Than Win",
-      "address": "Pyi, Myanmar",
-      "accepted": false,
-      "rejected": false,
-      "isNewStudent": false,
-      "email": "2022-miit-cse-011@miit.edu.mm",
-      "paymentStatus": "paid", // Added missing field
-      "paymentAmount": "100,000 MMK", // Added missing field
-      "paymentDate": "15.10.2023", // Added missing field
-    },
-    {
-      "name": "Phyo Myat Htoo Sint",
-      "rollNo1": "2022-MIIT-CSE-023",
-      "dob": "8.12.2004",
-      "father": "U Win Swe Htoo",
-      "mother": "Daw Than Than Nwe",
-      "address": "Amarapura, Myanmar",
-      "accepted": false,
-      "rejected": false,
-      "isNewStudent": true,
-      "email": "2022-miit-cse-023@miit.edu.mm",
-      "paymentStatus": "pending", // Added missing field
-      "paymentAmount": "150,000 MMK", // Added missing field
-      "paymentDate": "Not paid", // Added missing field
-    },
-    {
-      "name": "Win Pa Pa Phyo",
-      "rollNo1": "2022-MIIT-CSE-029",
-      "dob": "5.1.2025",
-      "father": "U Win Ko",
-      "mother": "Daw Thida Aye",
-      "address": "Mandalay",
-      "accepted": false,
-      "rejected": false,
-      "isNewStudent": false,
-      "email": "2022-miit-cse-029@miit.edu.mm",
-      "paymentStatus": "paid", // Added missing field
-      "paymentAmount": "100,000 MMK", // Added missing field
-      "paymentDate": "20.10.2023", // Added missing field
-    },
-  ];
-
-  // New student requests
-  List<Map<String, dynamic>> newStudentRequests = [
-    {
-      "name": "Min Khant Maung",
-      "rollNo1": "2025-MIIT-CSE-001",
-      "dob": "12.5.2005",
-      "father": "U Khant Maung",
-      "mother": "Daw Hla Myint",
-      "address": "Mandalay, Myanmar",
-      "accepted": false,
-      "rejected": false,
-      "isNewStudent": true,
-      "email": "2025-miit-cse-001@miit.edu.mm",
-      "paymentStatus": "pending", // Added missing field
-      "paymentAmount": "150,000 MMK", // Added missing field
-      "paymentDate": "Not paid", // Added missing field
-    },
-    {
-      "name": "Aye Sandar Myint",
-      "rollNo1": "2025-MIIT-CSE-021",
-      "dob": "15.8.2007",
-      "father": "U Myint",
-      "mother": "Daw Aye",
-      "address": "Mandalay, Myanmar",
-      "accepted": false,
-      "rejected": false,
-      "isNewStudent": true,
-      "email": "2025-miit-cse-021@miit.edu.mm",
-      "paymentStatus": "pending", // Added missing field
-      "paymentAmount": "150,000 MMK", // Added missing field
-      "paymentDate": "Not paid", // Added missing field
-    },
-  ];
+  List<Map<String, dynamic>> oldStudentRequests = [];
+  List<Map<String, dynamic>> newStudentRequests = [];
+  StreamSubscription<QuerySnapshot>? _oldStudentsSubscription;
+  StreamSubscription<QuerySnapshot>? _newStudentsSubscription;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _setupStudentsListener();
   }
 
   @override
   void dispose() {
+    _oldStudentsSubscription?.cancel();
+    _newStudentsSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  // Submit all selections
-  void _submitSelections() {
-    List<String> acceptedStudents = [];
-    List<String> rejectedStudents = [];
+  void _setupStudentsListener() {
+    // Listen for OLD students with pending enrollment
+    _oldStudentsSubscription = FirebaseFirestore.instance
+        .collection('students')
+        .where('stype', isEqualTo: 'old')
+        .where('academicInfo.enrollStatus', isEqualTo: 'Pending')
+        .snapshots()
+        .listen((snapshot) {
+      print('Found ${snapshot.docs.length} old students with pending enrollment');
+      _processOldStudentRequests(snapshot.docs);
+    });
 
-    // Process old student requests
-    for (var request in oldStudentRequests) {
-      if (request["accepted"] == true) {
-        acceptedStudents.add("${request["name"]} (${'oldStudent'.tr()})");
-      } else if (request["rejected"] == true) {
-        rejectedStudents.add("${request["name"]} (${'oldStudent'.tr()})");
-      }
-    }
-
-    // Process new student requests
-    for (var request in newStudentRequests) {
-      if (request["accepted"] == true) {
-        acceptedStudents.add("${request["name"]} (${'newStudent'.tr()})");
-      } else if (request["rejected"] == true) {
-        rejectedStudents.add("${request["name"]} (${'newStudent'.tr()})");
-      }
-    }
-
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('confirmation'.tr()),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (acceptedStudents.isNotEmpty) ...[
-              Text('acceptedStudents'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-              ...acceptedStudents.map((name) => Text("• $name")),
-              const SizedBox(height: 16),
-            ],
-            if (rejectedStudents.isNotEmpty) ...[
-              Text('rejectedStudents'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-              ...rejectedStudents.map((name) => Text("• $name")),
-            ],
-            if (acceptedStudents.isEmpty && rejectedStudents.isEmpty)
-              Text('noSelections'.tr()),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Remove processed requests
-              setState(() {
-                oldStudentRequests.removeWhere((request) =>
-                request["accepted"] == true || request["rejected"] == true);
-                newStudentRequests.removeWhere((request) =>
-                request["accepted"] == true || request["rejected"] == true);
-              });
-              Navigator.pop(context);
-
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'processedRequests'.tr(args: ['${acceptedStudents.length + rejectedStudents.length}']),
-                  ),
-                ),
-              );
-            },
-            child: Text('confirm'.tr()),
-          ),
-        ],
-      ),
-    );
+    // Listen for NEW students with pending enrollment
+    _newStudentsSubscription = FirebaseFirestore.instance
+        .collection('students')
+        .where('stype', isEqualTo: 'new')
+        .where('academicInfo.enrollStatus', isEqualTo: 'Pending')
+        .snapshots()
+        .listen((snapshot) {
+      print('Found ${snapshot.docs.length} new students with pending enrollment');
+      _processNewStudentRequests(snapshot.docs);
+    });
   }
 
-  // Show email dialog for sending outlook email
-  void _showEmailDialog(Map<String, dynamic> request, bool isAccepted) {
-    final TextEditingController messageController = TextEditingController();
-    final String subject = isAccepted
-        ? 'acceptText'.tr()
-        : 'rejectText'.tr();
+  bool _isOldStudentByYear(int? startYear) {
+    if (startYear == null) return false;
 
-    final String defaultMessage = isAccepted
-        ? 'acceptanceEmailMessage'.tr(args: [request["name"] ?? 'Student'])
-        : 'rejectionEmailMessage'.tr(args: [request["name"] ?? 'Student']);
+    // Get current admin year for comparison
+    // You might need to fetch this from your admin_academic_year collection
+    final currentYear = DateTime.now().year;
+    return startYear < currentYear;
+  }
 
-    messageController.text = defaultMessage;
+  bool _hasPreviousEnrollment(Map<String, dynamic> studentData) {
+    // Check if student has payment records in previous academic years
+    // This would require checking your paymentInfo collection
+    return false; // Implement based on your business logic
+  }
 
-    showDialog(
+  void _processOldStudentRequests(List<QueryDocumentSnapshot> docs) {
+    final requests = docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final academicInfo = data['academicInfo'] as Map<String, dynamic>? ?? {};
+
+      return {
+        "id": doc.id, // Student document ID
+        "studentId": doc.id,
+        "name": data['sname'] ?? 'Unknown',
+        "rollNo1": data['srollno'] ?? 'N/A',
+        "courseYear": academicInfo['courseYear'] ?? 'N/A',
+        "major": data['smajor'] ?? 'N/A',
+        "paymentStatus": "Pending", // Default since we're not using enrollment_requests
+        "paymentAmount": 0,
+        "paymentReference": 'N/A',
+        "paymentDate": null,
+        "isNewStudent": false, // This is old student
+        "status": academicInfo['enrollStatus'] ?? 'Pending',
+        "approvedBy": null,
+        "approvedDate": null,
+        "accepted": false,
+        "rejected": false,
+        "processing": false,
+        "deleting": false,
+        "studentData": data, // Store full student data for details
+      };
+    }).toList();
+
+    setState(() {
+      oldStudentRequests = requests;
+    });
+  }
+
+  void _processNewStudentRequests(List<QueryDocumentSnapshot> docs) {
+    final requests = docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final academicInfo = data['academicInfo'] as Map<String, dynamic>? ?? {};
+
+      return {
+        "id": doc.id, // Student document ID
+        "studentId": doc.id,
+        "name": data['sname'] ?? 'Unknown',
+        "rollNo1": data['srollno'] ?? 'N/A',
+        "courseYear": academicInfo['courseYear'] ?? 'N/A',
+        "major": data['smajor'] ?? 'N/A',
+        "paymentStatus": "Pending", // Default since we're not using enrollment_requests
+        "paymentAmount": 0,
+        "paymentReference": 'N/A',
+        "paymentDate": null,
+        "isNewStudent": true, // This is new student
+        "status": academicInfo['enrollStatus'] ?? 'Pending',
+        "approvedBy": null,
+        "approvedDate": null,
+        "accepted": false,
+        "rejected": false,
+        "processing": false,
+        "deleting": false,
+        "studentData": data, // Store full student data for details
+      };
+    }).toList();
+
+    setState(() {
+      newStudentRequests = requests;
+    });
+  }
+
+  Future<Map<String, dynamic>?> _getStudentDetails(String studentId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('students').doc(studentId).get();
+      if (doc.exists) return doc.data();
+    } catch (e) {
+      print("Error getting student details: $e");
+    }
+    return null;
+  }
+
+  // Individual confirm button handler
+  Future<void> _confirmIndividualRequest(Map<String, dynamic> request) async {
+    if (!request["accepted"] && !request["rejected"]) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('pleaseSelectAcceptOrReject'.tr()), backgroundColor: Colors.orange)
+      );
+      return;
+    }
+
+    setState(() {
+      request["processing"] = true;
+    });
+
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final currentTime = FieldValue.serverTimestamp();
+
+      // Update student document directly
+      final studentRef = FirebaseFirestore.instance.collection('students').doc(request["studentId"]);
+
+      if (request["accepted"]) {
+        // Accepted - Enrolled & Active status
+        await studentRef.update({
+          'academicInfo.enrollStatus': 'Enrolled',
+          'academicInfo.academicStatus': 'Active',
+          'academicInfo.enrollmentDate': currentTime,
+          'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
+          'academicInfo.approvedDate': currentTime,
+          'lastUpdated': currentTime,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${request["name"]} ${'acceptedSuccessfully'.tr()}'), backgroundColor: Colors.green)
+        );
+
+        // Update local state to reflect the change
+        setState(() {
+          request["status"] = 'Enrolled';
+          request["accepted"] = true;
+          request["rejected"] = false;
+          request["approvedBy"] = currentUser?.email ?? 'Admin';
+          request["approvedDate"] = DateTime.now();
+        });
+
+      } else if (request["rejected"]) {
+        // Rejected - Rejected & Suspended status
+        await studentRef.update({
+          'academicInfo.enrollStatus': 'Rejected',
+          'academicInfo.academicStatus': 'Suspended',
+          'academicInfo.enrollmentDate': currentTime,
+          'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
+          'academicInfo.approvedDate': currentTime,
+          'lastUpdated': currentTime,
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${request["name"]} ${'rejectedSuccessfully'.tr()}'), backgroundColor: Colors.red)
+        );
+
+        // Update local state to reflect the change
+        setState(() {
+          request["status"] = 'Rejected';
+          request["accepted"] = false;
+          request["rejected"] = true;
+          request["approvedBy"] = currentUser?.email ?? 'Admin';
+          request["approvedDate"] = DateTime.now();
+        });
+      }
+
+    } catch (e) {
+      print("Error processing individual request: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errorProcessingRequest'.tr()), backgroundColor: Colors.red)
+      );
+    } finally {
+      setState(() {
+        request["processing"] = false;
+      });
+    }
+  }
+
+  // Delete request handler - Now we'll remove from pending list instead of deleting document
+  Future<void> _deleteRequest(Map<String, dynamic> request) async {
+    bool? confirmDelete = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text(isAccepted ? 'sendAcceptanceEmail'.tr() : 'sendRejectionEmail'.tr()),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('to'.tr() + ': ${request["email"] ?? "No email provided"}'),
-            const SizedBox(height: 8),
-            Text('subject'.tr() + ': $subject'),
-            const SizedBox(height: 16),
-            TextField(
-              controller: messageController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                labelText: 'message'.tr(),
-                border: const OutlineInputBorder(),
-              ),
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('removeConfirmation'.tr()),
+          content: Text('removeRequestConfirmation'.tr(args: [request["name"]])),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('cancel'.tr()),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: Text('remove'.tr()),
             ),
           ],
+        );
+      },
+    );
+
+    if (confirmDelete != true) return;
+
+    setState(() {
+      request["deleting"] = true;
+    });
+
+    try {
+      // Since we're working with student documents, we'll just update the status to remove from pending
+      await FirebaseFirestore.instance.collection('students').doc(request["studentId"]).update({
+        'academicInfo.enrollStatus': 'Removed',
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${request["name"]} ${'removedSuccessfully'.tr()}'), backgroundColor: Colors.green)
+      );
+
+      // Remove the request from the list
+      setState(() {
+        if (request["isNewStudent"]) {
+          newStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+        } else {
+          oldStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+        }
+      });
+
+    } catch (e) {
+      print("Error removing request: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('errorRemovingRequest'.tr()), backgroundColor: Colors.red)
+      );
+    } finally {
+      setState(() {
+        request["deleting"] = false;
+      });
+    }
+  }
+
+  void _showStudentDetails(Map<String, dynamic> request) {
+    final studentDetails = request["studentData"];
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('studentDetails'.tr()),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('studentRollNo'.tr(), request["rollNo1"]),
+              _buildDetailRow('studentType'.tr(), request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()),
+              _buildDetailRow('enrollmentStatus'.tr(), request["status"]),
+              if (request["approvedBy"] != null) _buildDetailRow('approvedBy'.tr(), request["approvedBy"]),
+              if (request["approvedDate"] != null) _buildDetailRow('approvedDate'.tr(), _formatDate(request["approvedDate"])),
+              _buildDetailRow('bDate'.tr(), studentDetails['sdob'] ?? 'N/A'),
+              _buildDetailRow('fatherName'.tr(), studentDetails['parents']?['father']?['fname_eng'] ?? 'N/A'),
+              _buildDetailRow('motherName'.tr(), studentDetails['parents']?['mother']?['mname_eng'] ?? 'N/A'),
+              _buildDetailRow('address'.tr(), studentDetails['saddress'] ?? 'N/A'),
+              _buildDetailRow('religion'.tr(), studentDetails['sreligion'] ?? 'N/A'),
+              _buildDetailRow('gender'.tr(), studentDetails['sgender'] ?? 'N/A'),
+              const SizedBox(height: 16),
+              Text('academicInformation'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+              _buildDetailRow('courseYear'.tr(), request["courseYear"] ?? 'N/A'),
+              _buildDetailRow('major'.tr(), request["major"] ?? 'N/A'),
+              _buildDetailRow('academicYear'.tr(), studentDetails['academicInfo']?['academicYear'] ?? 'N/A'),
+              _buildDetailRow('enrollStatus'.tr(), studentDetails['academicInfo']?['enrollStatus'] ?? 'N/A'),
+              _buildDetailRow('academicStatus'.tr(), studentDetails['academicInfo']?['academicStatus'] ?? 'N/A'),
+            ],
+          ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('cancel'.tr()),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Simulate sending email
-              _sendEmail(request["email"] ?? "", subject, messageController.text);
-              Navigator.pop(context);
-
-              // Show success message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'emailSentTo'.tr(args: [request["name"] ?? "Student"]),
-                  ),
-                ),
-              );
-            },
-            child: Text('sendEmail'.tr()),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('close'.tr()),
           ),
         ],
       ),
     );
   }
 
-  // Simulate sending email (in a real app, you would integrate with an email service)
-  void _sendEmail(String email, String subject, String message) {
-    print('Sending email to: $email');
-    print('Subject: $subject');
-    print('Message: $message');
-    // In a real app, you would integrate with an email service like mailto, SendGrid, etc.
-  }
-
-  // Show student details in an alert dialog
-  void _showStudentDetails(Map<String, dynamic> request) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('studentDetailsWithName'.tr()),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('rollNo1'.tr(), request["rollNo1"] ?? "N/A"),
-              _buildDetailRow('type'.tr(), (request["isNewStudent"] ?? false) ? 'newStudent'.tr() : 'oldStudent'.tr()),
-              _buildDetailRow('bDate'.tr(), request["dob"] ?? "N/A"),
-              _buildDetailRow('fatherName'.tr(), request["father"] ?? "N/A"),
-              _buildDetailRow('motherName'.tr(), request["mother"] ?? "N/A"),
-              _buildDetailRow('address'.tr(), request["address"] ?? "N/A"),
-              _buildDetailRow('email'.tr(), request["email"] ?? "N/A"),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Show payment details dialog
   void _showPaymentDetails(Map<String, dynamic> request) {
+    // Since we're not using enrollment_requests, show basic payment info
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('paymentDetailsWithName'.tr()),
+        title: Text('paymentInformation'.tr()),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildDetailRow('rollNo1'.tr(), request["rollNo1"] ?? "N/A"),
-              _buildDetailRow('name'.tr(), request["name"] ?? "N/A"),
-              _buildDetailRow('type'.tr(), (request["isNewStudent"] ?? false) ? 'newStudent'.tr() : 'oldStudent'.tr()),
-              _buildDetailRow('paymentStatus'.tr(), request["paymentStatus"] ?? "N/A"),
-              _buildDetailRow('amount'.tr(), request["paymentAmount"] ?? "N/A"),
-              _buildDetailRow('paymentDate'.tr(), request["paymentDate"] ?? "N/A"),
+              _buildDetailRow('studentID'.tr(), request["rollNo1"]),
+              _buildDetailRow('studentName'.tr(), request["name"]),
+              _buildDetailRow('studentType'.tr(), request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()),
+              _buildDetailRow('enrollmentStatus'.tr(), request["status"]),
+              _buildDetailRow('paymentStatus'.tr(), 'Pending - To be processed'),
+              _buildDetailRow('note'.tr(), 'Payment will be processed after enrollment approval'),
             ],
           ),
         ),
@@ -303,7 +357,16 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     );
   }
 
-  // Helper method to build a detail row
+  String _formatDate(dynamic date) {
+    if (date is DateTime) {
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (date is Timestamp) {
+      final dateTime = date.toDate();
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    }
+    return date.toString();
+  }
+
   Widget _buildDetailRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
@@ -311,7 +374,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
+            width: 120,
             child: Text(
               "$label:",
               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -324,178 +387,260 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     );
   }
 
-  // Build a request card
   Widget _buildRequestCard(Map<String, dynamic> request, bool isNewStudent) {
-    return Container(
+    final bool isPending = request["status"] == 'Pending';
+    final bool isEnrolled = request["status"] == 'Enrolled';
+    final bool isRejected = request["status"] == 'Rejected';
+
+    return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isNewStudent ? Colors.orange[50] : Colors.blue[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isNewStudent ? Colors.orange[100]! : Colors.blue[100]!),
-      ),
-      child: Column(
-        children: [
-          // Student info and action buttons
-          Row(
-            children: [
-              // Student Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      request["name"] ?? "Unknown",
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "${request["rollNo1"] ?? "N/A"} • ${isNewStudent ? 'newStudent'.tr() : 'oldStudent'.tr()}",
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "${'payment1'.tr()}: ${request["paymentStatus"] ?? "N/A"}",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: (request["paymentStatus"] ?? "") == "paid".tr()
-                            ? Colors.green
-                            : (request["paymentStatus"] ?? "") == "pending1".tr()
-                            ? Colors.orange
-                            : Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Accept and Reject Checkboxes
-              Column(
-                children: [
-                  // Accept Checkbox
-                  Row(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            // Student Info Row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('accept'.tr(), style: const TextStyle(fontSize: 12)),
-                      Checkbox(
-                        value: request["accepted"] ?? false,
-                        onChanged: (value) {
-                          setState(() {
-                            // If accepting, make sure rejected is false
-                            if (value == true) {
-                              request["rejected"] = false;
-                            }
-                            request["accepted"] = value;
-                          });
-                        },
-                        activeColor: Colors.green,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      Text(
+                        request["name"]!,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-
-                  // Reject Checkbox
-                  Row(
-                    children: [
-                      Text('reject'.tr(), style: const TextStyle(fontSize: 12)),
-                      Checkbox(
-                        value: request["rejected"] ?? false,
-                        onChanged: (value) {
-                          setState(() {
-                            // If rejecting, make sure accepted is false
-                            if (value == true) {
-                              request["accepted"] = false;
-                            }
-                            request["rejected"] = value;
-                          });
-                        },
-                        activeColor: Colors.red,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      const SizedBox(height: 4),
+                      Text(
+                        "${request["rollNo1"]!} • ${isNewStudent ? 'newStudent'.tr() : 'oldStudent'.tr()}",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-
-                  // Confirm Button
-                  ElevatedButton(
-                    onPressed: () {
-                      if (request["accepted"] == true) {
-                        _showEmailDialog(request, true);
-                      } else if (request["rejected"] == true) {
-                        _showEmailDialog(request, false);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('pleaseSelectAcceptOrReject'.tr()),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            "${'payment1'.tr()}: ${request["paymentStatus"]}",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      minimumSize: const Size(0, 30),
-                    ),
-                    child: Text('confirm'.tr(), style: const TextStyle(fontSize: 12)),
+                          const SizedBox(width: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isEnrolled
+                                  ? Colors.green[100]
+                                  : isRejected
+                                  ? Colors.red[100]
+                                  : Colors.orange[100],
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              request["status"]!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isEnrolled
+                                    ? Colors.green[800]
+                                    : isRejected
+                                    ? Colors.red[800]
+                                    : Colors.orange[800],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (request["approvedBy"] != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          "Approved by: ${request["approvedBy"]}",
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
 
-          // Action buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // View Student Details Button
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                // Accept/Reject Checkboxes with Confirm & Delete buttons below (only for pending requests)
+                if (isPending)
+                  Column(
+                    children: [
+                      // Accept/Reject Row
+                      Row(
+                        children: [
+                          Text('accept'.tr(), style: const TextStyle(fontSize: 12)),
+                          Checkbox(
+                            value: request["accepted"],
+                            onChanged: (request["processing"] || request["deleting"])
+                                ? null
+                                : (value) {
+                              setState(() {
+                                if (value == true) request["rejected"] = false;
+                                request["accepted"] = value;
+                              });
+                            },
+                            activeColor: Colors.green,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Text('reject'.tr(), style: const TextStyle(fontSize: 12)),
+                          Checkbox(
+                            value: request["rejected"],
+                            onChanged: (request["processing"] || request["deleting"])
+                                ? null
+                                : (value) {
+                              setState(() {
+                                if (value == true) request["accepted"] = false;
+                                request["rejected"] = value;
+                              });
+                            },
+                            activeColor: Colors.red,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                        ],
+                      ),
+
+                      // Confirm & Delete buttons positioned exactly under checkboxes
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          // Confirm Button
+                          ElevatedButton(
+                            onPressed: (request["processing"] || request["deleting"])
+                                ? null
+                                : () => _confirmIndividualRequest(request),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: (request["accepted"] || request["rejected"])
+                                  ? Colors.blue
+                                  : Colors.grey,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              minimumSize: const Size(70, 30),
+                            ),
+                            child: request["processing"]
+                                ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                                : Text(
+                              'confirm'.tr(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  )
+                else
+                // Show status badge and remove button for processed requests
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        isEnrolled ? Icons.check_circle : Icons.cancel,
+                        color: isEnrolled ? Colors.green : Colors.red,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isEnrolled ? 'enrolled'.tr() : 'rejected'.tr(),
+                        style: TextStyle(
+                          color: isEnrolled ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Remove Button for processed requests
+                      ElevatedButton(
+                        onPressed: (request["deleting"]) ? null : () => _deleteRequest(request),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          minimumSize: const Size(70, 30),
+                        ),
+                        child: request["deleting"]
+                            ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                            : Text(
+                          'remove'.tr(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+
+            // Student Details & Payment Details Buttons
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                // Student Details Button
+                Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
                       _showStudentDetails(request);
                     },
                     icon: const Icon(Icons.person_outline, size: 16),
-                    label: Text('studentDetails'.tr(), style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      'studentDetails'.tr(),
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[100],
                       foregroundColor: Colors.blue[800],
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     ),
                   ),
                 ),
-              ),
 
-              // View Payment Details Button
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                const SizedBox(width: 4),
+
+                // Payment Details Button
+                Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
                       _showPaymentDetails(request);
                     },
                     icon: const Icon(Icons.payment_outlined, size: 16),
-                    label: Text('paymentDetails'.tr(), style: const TextStyle(fontSize: 12)),
+                    label: Text(
+                      'paymentInfo'.tr(),
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green[100],
                       foregroundColor: Colors.green[800],
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // Build old student requests view
   Widget _buildOldStudentRequestsView() {
     if (oldStudentRequests.isEmpty) {
       return Center(
@@ -507,20 +652,17 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
             Text(
               'noOldStudentRequests'.tr(),
               style: const TextStyle(fontSize: 18, color: Colors.grey),
-            ),
+            )
           ],
         ),
       );
     }
 
     return ListView(
-      children: [
-        ...oldStudentRequests.map((request) => _buildRequestCard(request, false)).toList(),
-      ],
+      children: oldStudentRequests.map((request) => _buildRequestCard(request, false)).toList(),
     );
   }
 
-  // Build new student requests view
   Widget _buildNewStudentRequestsView() {
     if (newStudentRequests.isEmpty) {
       return Center(
@@ -532,16 +674,14 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
             Text(
               'noNewStudentRequests'.tr(),
               style: const TextStyle(fontSize: 18, color: Colors.grey),
-            ),
+            )
           ],
         ),
       );
     }
 
     return ListView(
-      children: [
-        ...newStudentRequests.map((request) => _buildRequestCard(request, true)).toList(),
-      ],
+      children: newStudentRequests.map((request) => _buildRequestCard(request, true)).toList(),
     );
   }
 
@@ -549,16 +689,17 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        title: Text('enrollmentRequests'.tr()),
         bottom: TabBar(
           controller: _tabController,
           tabs: [
             Tab(
               icon: const Icon(Icons.people_outline),
-              text: 'oldStudent'.tr(),
+              text: '${'oldStudent'.tr()} (${oldStudentRequests.length})',
             ),
             Tab(
               icon: const Icon(Icons.person_add_outlined),
-              text: 'newStudent'.tr(),
+              text: '${'newStudent'.tr()} (${newStudentRequests.length})',
             ),
           ],
         ),
@@ -566,16 +707,9 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Old Students Tab
           _buildOldStudentRequestsView(),
-
-          // New Students Tab
           _buildNewStudentRequestsView(),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _submitSelections,
-        child: const Icon(Icons.check),
       ),
     );
   }

@@ -87,6 +87,21 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
     });
 
     try {
+      // First, get the admin academic year from the 'admin' document
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('admin_academic_year')
+          .doc('admin') // Document ID is 'admin' based on your structure
+          .get();
+
+      if (!adminDoc.exists) {
+        _showAlert(tr("error"), tr("adminYearNotSet"));
+        return;
+      }
+
+      final adminStartYear = adminDoc.get('astart_year') as int;
+      final adminEndYear = adminDoc.get('aend_year') as int;
+
+      // Then check the student
       final querySnapshot = await FirebaseFirestore.instance
           .collection('students')
           .where('academicInfo.eduMail', isEqualTo: email)
@@ -100,15 +115,24 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
         final studentData = doc.data();
         final studentId = doc.id;
 
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OldUniRules(
-              studentData: studentData,
-              studentId: studentId,
+        // Check if student's start year matches admin's start year
+        final academicInfo = studentData['academicInfo'] as Map<String, dynamic>;
+        final studentStartYear = academicInfo['start_year'] as int;
+        final studentEndYear = academicInfo['end_year'] as int;
+
+        if (studentStartYear == adminStartYear && studentEndYear == adminEndYear) {
+          _showAlert(tr("alreadyEnrolled"), tr("alreadyEnrolledMessage"));
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OldUniRules(
+                studentData: studentData,
+                studentId: studentId,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
     } catch (e) {
       print("Error checking email: $e");

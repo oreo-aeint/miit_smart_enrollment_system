@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:miit_project/screens/admin_drawer.dart';
 import 'my_drawer.dart';
 import 'package:miit_project/components/input_text_box.dart';
@@ -10,10 +11,10 @@ import 'package:miit_project/components/text.dart';
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
 
-  // Add this static method for logout
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('adminLoggedIn', false);
+    await FirebaseAuth.instance.signOut();
   }
 
   @override
@@ -21,67 +22,81 @@ class AdminLoginScreen extends StatefulWidget {
 }
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
-  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
-
-  final String adminUser = "admin";
-  final String adminPass = "miit123";
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    // Clear any previous login status to force fresh login
     _clearLoginStatus();
   }
 
-  // Clear any previous login status
   Future<void> _clearLoginStatus() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('adminLoggedIn', false);
   }
 
-  void _loginAdmin() async {
-    String username = _usernameController.text.trim();
-    String password = _passwordController.text.trim();
+  Future<void> _loginAdmin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (username == adminUser && password == adminPass) {
-      // Save login status (though it will be cleared next time)
+    if (!email.endsWith('@miit.edu.mm')) {
+      _showErrorDialog("Only @miit.edu.mm emails are allowed for admin login.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Firebase Auth login
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('adminLoggedIn', true);
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AdminDrawer(),
-        ),
+        MaterialPageRoute(builder: (context) => const AdminDrawer()),
       );
-    } else {
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text("error".tr()),
-            content: Text("invalidLogin".tr()),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // close the dialog
-                },
-                child: Text("ok".tr()),
-              ),
-            ],
-          );
-        },
-      );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = "Login failed.";
+      if (e.code == 'user-not-found') {
+        errorMessage = "No user found for that email.";
+      } else if (e.code == 'wrong-password') {
+        errorMessage = "Wrong password.";
+      } else if (e.code == 'invalid-email') {
+        errorMessage = "Invalid email format.";
+      }
+
+      _showErrorDialog(errorMessage);
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  // Toggle password visibility
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text("error".tr()),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text("ok".tr()),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _togglePasswordVisibility() {
-    setState(() {
-      _obscurePassword = !_obscurePassword;
-    });
+    setState(() => _obscurePassword = !_obscurePassword);
   }
 
   @override
@@ -98,10 +113,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                Color(0xFF87CEFA),
-                Color(0xFFADD8E6),
-              ],
+              colors: [Color(0xFF87CEFA), Color(0xFFADD8E6)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -110,28 +122,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         title: Row(
           children: [
             Builder(
-              builder: (context) {
-                return GestureDetector(
-                  onTap: () {
-                    Scaffold.of(context).openDrawer();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8.0),
-                    child: Image.asset(
-                      'assets/img_2.png',
-                      width: 50,
-                      height: 50,
-                    ),
-                  ),
-                );
-              },
+              builder: (context) => GestureDetector(
+                onTap: () => Scaffold.of(context).openDrawer(),
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: Image.asset('assets/img_2.png', width: 50, height: 50),
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                "adminLogin".tr(),
-                style: AppTextStyles.heading,
-              ),
+              child: Text("adminLogin".tr(), style: AppTextStyles.heading),
             ),
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
@@ -140,19 +141,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 icon: const Icon(Icons.language, color: Colors.indigo),
                 value: context.locale,
                 onChanged: (Locale? newLocale) {
-                  if (newLocale != null) {
-                    context.setLocale(newLocale);
-                  }
+                  if (newLocale != null) context.setLocale(newLocale);
                 },
                 items: const [
-                  DropdownMenuItem(
-                    value: Locale('en'),
-                    child: Text("English"),
-                  ),
-                  DropdownMenuItem(
-                    value: Locale('my'),
-                    child: Text("မြန်မာ"),
-                  ),
+                  DropdownMenuItem(value: Locale('en'), child: Text("English")),
+                  DropdownMenuItem(value: Locale('my'), child: Text("မြန်မာ")),
                 ],
               ),
             ),
@@ -169,10 +162,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                ),
+                    color: Colors.black38, blurRadius: 10, offset: Offset(0, 5)),
               ],
             ),
             child: Column(
@@ -190,11 +180,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 InputTextBox(
-                  label: "username".tr(),
-                  controller: _usernameController,
-                  icon: Icons.person_outline,
+                  label: "email".tr(),
+                  controller: _emailController,
+                  icon: Icons.email_outlined,
                 ),
-                // Custom password field using your InputTextBox with additional decoration
                 Container(
                   margin: const EdgeInsets.only(bottom: 20),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -213,7 +202,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outline, color: Colors.indigo),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
                           color: Colors.indigo,
                         ),
                         onPressed: _togglePasswordVisibility,
@@ -222,7 +213,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                ActionButton(
+                _isLoading
+                    ? const CircularProgressIndicator()
+                    : ActionButton(
                   text: "login".tr(),
                   icon: Icons.login,
                   onPressed: _loginAdmin,

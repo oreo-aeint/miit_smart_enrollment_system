@@ -407,41 +407,80 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
     );
   }
   bool _isSubmitting = false;
-  void _submitForm() async{
+  void _submitForm() async {
     if (_isSubmitting) return;
 
     setState(() {
-      // _formSubmitted = true;   // show required errors
-      _isSubmitting = true;    // mark as submitting
+      _isSubmitting = true;
     });
 
-    try{
-      final studentsCollection = FirebaseFirestore.instance.collection('students');
+    try {
+      final firestore = FirebaseFirestore.instance;
 
       final String rollNo = rollNoController.text.trim();
       final String qrCode = referenceController.text.trim();
       final String payDate = dateController.text.trim();
       final String payAmount = amountController.text.trim();
 
-      await studentsCollection.doc(rollNo).update({
-        "paymentInfo": {
-          "qr_code": qrCode,
-          "pay_date": payDate,
-          "pay_amount": payAmount,
-          "paymentInfo.paymentStatus": "paid",
-          "created_at": FieldValue.serverTimestamp(), // Add timestamp
-        }
-      });
+      // First, get the student's academic year from their document
+      final studentDoc = await firestore.collection('students').doc(rollNo).get();
 
-    }
-    catch (e) {
+      if (!studentDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Student not found")),
+        );
+        setState(() => _isSubmitting = false);
+        return;
+      }
+
+      // Extract academic year from student data
+      final academicYear = studentDoc.data()?['academicInfo']?['academicYear'] ?? '2024-2025';
+
+      // Create the composite document ID
+      final paymentDocId = '${academicYear}_$rollNo';
+
+      // ✅ Use set with merge: true to create or update the payment document
+      await firestore.collection('paymentInfo').doc(paymentDocId).set({
+        "studentId": rollNo,
+        "academicYear": academicYear,
+        "qr_code": qrCode,
+        "pay_date": payDate,
+        "pay_amount": double.parse(payAmount),
+        "paymentStatus": "paid",
+        "lastUpdated": FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Also update enrollment request payment status if needed
+      final enrollmentQuery = await firestore.collection('enrollment_requests')
+          .where('studentId', isEqualTo: rollNo)
+          .where('status', isEqualTo: 'Pending')
+          .limit(1)
+          .get();
+
+      if (enrollmentQuery.docs.isNotEmpty) {
+        await enrollmentQuery.docs.first.reference.update({
+          "paymentStatus": "paid",
+          "lastUpdated": FieldValue.serverTimestamp(),
+        });
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Payment updated successfully")),
+      );
+
+      // Optional: Clear form after success
+      referenceController.clear();
+      dateController.clear();
+      amountController.clear();
+
+    } catch (e) {
       print("Firebase Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ ${tr('enrollmentError')}: $e")),
+        SnackBar(content: Text("❌ Payment update error: $e")),
       );
     } finally {
       setState(() {
-        _isSubmitting = false; // reset submitting state
+        _isSubmitting = false;
       });
     }
   }

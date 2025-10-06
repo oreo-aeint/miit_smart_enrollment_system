@@ -1261,9 +1261,11 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         updateData['scontactNumber'] = phoneController.text;
       }
 
-      // Update academic info - FIXED: Use dropdown values instead of academicYearController
+      // Update academic info
       if (fromYear != null && toYear != null) {
         updateData['academicInfo.academicYear'] = "$fromYear-$toYear";
+        updateData['academicInfo.start_year'] = int.parse(fromYear!);
+        updateData['academicInfo.end_year'] = int.parse(toYear!);
       } else if (fromYear != null) {
         // If only fromYear is selected, keep the existing toYear part
         final existingData = docSnapshot.data();
@@ -1274,6 +1276,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         } else {
           updateData['academicInfo.academicYear'] = "$fromYear-";
         }
+        updateData['academicInfo.start_year'] = int.parse(fromYear!);
       } else if (toYear != null) {
         // If only toYear is selected, keep the existing fromYear part
         final existingData = docSnapshot.data();
@@ -1284,6 +1287,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         } else {
           updateData['academicInfo.academicYear'] = "-$toYear";
         }
+        updateData['academicInfo.end_year'] = int.parse(toYear!);
       }
 
       // Update course year if selected
@@ -1306,19 +1310,28 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         updateData['parents.mother.mphone'] = motherPhoneController.text;
       }
 
+      // FIXED: Determine student type based on academic year comparison
+      final existingData = docSnapshot.data();
+      final existingStartYear = existingData?['academicInfo']?['start_year'] as int?;
 
-      if (_studentYear != null && _adminYear != null) {
-        if (_studentYear! < _adminYear!) {
+      // Get current admin academic year
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('admin_academic_year')
+          .doc('admin')
+          .get();
+
+      if (adminDoc.exists) {
+        final adminStartYear = adminDoc.get('astart_year') as int;
+
+        // Compare student's original start year with admin's current start year
+        if (existingStartYear != null && existingStartYear < adminStartYear) {
           updateData['stype'] = 'old';
+          print('Setting stype to "old": Student start year ($existingStartYear) < Admin start year ($adminStartYear)');
         } else {
-          updateData['stype'] = 'new'; // or whatever you want for current/equal years
+          updateData['stype'] = 'new';
+          print('Setting stype to "new": Student start year ($existingStartYear) >= Admin start year ($adminStartYear)');
         }
-      } else {
-        // Handle case where years are not available
-        updateData['stype'] = 'unknown';
-        print('Warning: Could not determine student type - missing year data');
       }
-
 
       // Debug: Print what we're about to update
       print('Update data: $updateData');
@@ -1536,6 +1549,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           setState(() {
             _adminStartYear = int.tryParse(startYear);
             _adminEndYear = int.tryParse(endYear);
+            _adminYear = _adminStartYear; // Set _adminYear for comparison
             fromYear = startYear;
             toYear = endYear;
             _isLoading = false;
