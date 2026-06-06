@@ -10,6 +10,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:miit_project/screens/new_student_payment.dart';
 import 'package:flutter/services.dart';
 
+import 'new_stu_photo.dart';
+
 enum NRCType { nrc, oldNrc, none }
 
 class NewStudentEnrollmentApp extends StatefulWidget {
@@ -134,9 +136,120 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
 
   // Fixed township codes with unique values
   final Map<String, List<String>> townshipCodes = {
-    "one".tr(): ["kachin1".tr(), "kachin2".tr(), "kachin3".tr(), /* ... */],
-    "two".tr(): ["kayah1".tr(), "kayah2".tr(), "kachin3".tr(), /* ... */],
-    // ... (your existing township codes)
+    "one".tr(): [
+      "kachin1".tr(), "kachin2".tr(), "kachin3".tr(), "kachin4".tr(), "kachin5".tr(),
+      "kachin6".tr(), "kachin7".tr(), "kachin8".tr(), "kachin9".tr(), "kachin10".tr(),
+      "kachin11".tr(), "kachin12".tr(), "kachin13".tr(), "kachin14".tr(), "kachin15".tr(),
+      "kachin16".tr(), "kachin17".tr(), "kachin18".tr(), "kachin19".tr(), "kachin20".tr(),
+      "kachin21".tr(), "kachin22".tr(), "kachin23".tr(), "kachin24".tr(), "kachin25".tr(),
+      "kachin26".tr(), "kachin27".tr(), "kachin28".tr(), "kachin29".tr(), "kachin30".tr(),
+    ],
+    "two".tr(): [
+      "kayah1".tr(), "kayah2".tr(), "kayah3".tr(), "kayah4".tr(), "kayah5".tr(),
+      "kayah6".tr(), "kayah7".tr(), "kayah8".tr(), "kayah9".tr(),
+    ],
+    "three".tr(): [
+      "kayin1".tr(), "kayin2".tr(), "kayin3".tr(), "kayin4".tr(), "kayin5".tr(),
+      "kayin6".tr(), "kayin7".tr(), "kayin8".tr(), "kayin9".tr(), "kayin10".tr(),
+      "kayin11".tr(), "kayin12".tr(), "kayin13".tr(), "kayin14".tr(), "kayin15".tr(),
+      "kayin16".tr(), "kayin17".tr(),
+    ],
+    "four".tr(): [
+      "chin1".tr(), "chin2".tr(), "chin3".tr(), "chin4".tr(), "chin5".tr(),
+      "chin6".tr(), "chin7".tr(), "chin8".tr(), "chin9".tr(), "chin10".tr(),
+      "chin11".tr(), "chin12".tr(), "chin13".tr(),
+    ],
+    "five".tr(): [
+      "sagaing1".tr(), "sagaing2".tr(), "sagaing3".tr(), "sagaing4".tr(), "sagaing5".tr(),
+      "sagaing6".tr(), "sagaing7".tr(), "sagaing8".tr(), "sagaing9".tr(), "sagaing10".tr(),
+      "sagaing11".tr(), "sagaing12".tr(), "sagaing13".tr(), "sagaing14".tr(), "sagaing15".tr(),
+      "sagaing16".tr(), "sagaing17".tr(), "sagaing18".tr(), "sagaing19".tr(), "sagaing20".tr(),
+      "sagaing21".tr(), "sagaing22".tr(), "sagaing23".tr(), "sagaing24".tr(), "sagaing25".tr(),
+      "sagaing26".tr(), "sagaing27".tr(), "sagaing28".tr(), "sagaing29".tr(), "sagaing30".tr(),
+      "sagaing31".tr(), "sagaing32".tr(), "sagaing33".tr(), "sagaing34".tr(), "sagaing35".tr(),
+      "sagaing36".tr(), "sagaing37".tr(), "sagaing38".tr(), "sagaing39".tr(), "sagaing40".tr(),
+      "sagaing41".tr(), "sagaing42".tr(), "sagaing43".tr(), "sagaing44".tr(), "sagaing45".tr(),
+      "sagaing46".tr(), "sagaing47".tr(),
+    ],
+    "six".tr(): [
+      "ta1".tr(), "ta2".tr(), "ta3".tr(), "ta4".tr(), "ta5".tr(),
+      "ta6".tr(), "ta7".tr(), "ta8".tr(), "ta9".tr(), "ta10".tr(),
+      "ta11".tr(), "ta12".tr(), "ta13".tr(), "ta14".tr(), "ta15".tr(),
+      "ta16".tr(), "ta17".tr(), "ta18".tr(),
+    ],
+    "seven".tr(): [
+      "bago1".tr(), "bago2".tr(), "bago3".tr(), "bago4".tr(), "bago5".tr(),
+      "bago6".tr(), "bago7".tr(), "bago8".tr(), "bago9".tr(), "bago10".tr(),
+      "bago11".tr(), "bago12".tr(), "bago13".tr(), "bago14".tr(), "bago15".tr(),
+      "bago16".tr(), "bago17".tr(), "bago18".tr(), "bago19".tr(), "bago20".tr(),
+      "bago21".tr(), "bago22".tr(), "bago23".tr(), "bago24".tr(), "bago25".tr(),
+      "bago26".tr(), "bago27".tr(), "bago28".tr(), "bago29".tr(), "bago30".tr(),
+      "bago31".tr(), "bago32".tr(), "bago33".tr(), "bago34".tr(),
+    ],
+    "eight".tr(): [
+      "mg1".tr(), "mg2".tr(), "mg3".tr(), "mg4".tr(), "mg5".tr(),
+      "mg6".tr(), "mg7".tr(), "mg8".tr(), "mg9".tr(), "mg10".tr(),
+      "mg11".tr(), "mg12".tr(), "mg13".tr(), "mg14".tr(), "mg15".tr(),
+      "mg16".tr(), "mg17".tr(), "mg18".tr(), "mg19".tr(), "mg20".tr(),
+      "mg21".tr(), "mg22".tr(), "mg23".tr(), "mg24".tr(), "mg25".tr(),
+      "mg26".tr(), "mg27".tr(),
+    ],
+    "nine".tr(): [
+      "mdy1".tr(), "mdy2".tr(), "mdy3".tr(), "mdy4".tr(), "mdy5".tr(),
+      "mdy6".tr(), "mdy7".tr(), "mdy8".tr(), "mdy9".tr(), "mdy10".tr(),
+      "mdy11".tr(), "mdy12".tr(), "mdy13".tr(), "mdy14".tr(), "mdy15".tr(),
+      "mdy16".tr(), "mdy17".tr(), "mdy18".tr(), "mdy19".tr(), "mdy20".tr(),
+      "mdy21".tr(), "mdy22".tr(), "mdy23".tr(), "mdy24".tr(), "mdy25".tr(),
+      "mdy26".tr(), "mdy27".tr(), "mdy28".tr(), "mdy29".tr(), "mdy30".tr(),
+      "mdy31".tr(), "mdy32".tr(), "mdy33".tr(), "mdy34".tr(), "mdy35".tr(),
+      "mdy36".tr(), "mdy37".tr(), "mdy38".tr(), "mdy39".tr(), "mdy40".tr(),
+      "mdy41".tr(), "mdy42".tr(), "mdy43".tr(), "mdy44".tr(), "mdy45".tr(),
+    ],
+    "ten".tr(): [
+      "mon1".tr(), "mon2".tr(), "mon3".tr(), "mon4".tr(), "mon5".tr(),
+      "mon6".tr(), "mon7".tr(), "mon8".tr(), "mon9".tr(), "mon10".tr(),
+      "mon11".tr(), "mon12".tr(), "mon13".tr(),
+    ],
+    "eleven".tr(): [
+      "yakine1".tr(), "yakine2".tr(), "yakine3".tr(), "yakine4".tr(), "yakine5".tr(),
+      "yakine6".tr(), "yakine7".tr(), "yakine8".tr(), "yakine9".tr(), "yakine10".tr(),
+      "yakine11".tr(), "yakine12".tr(), "yakine13".tr(), "yakine14".tr(), "yakine15".tr(),
+      "yakine16".tr(), "yakine17".tr(), "yakine18".tr(), "yakine19".tr(), "yakine20".tr(),
+    ],
+    "twelve".tr(): [
+      "ygn1".tr(), "ygn2".tr(), "ygn3".tr(), "ygn4".tr(), "ygn5".tr(),
+      "ygn6".tr(), "ygn7".tr(), "ygn8".tr(), "ygn9".tr(), "ygn10".tr(),
+      "ygn11".tr(), "ygn12".tr(), "ygn13".tr(), "ygn14".tr(), "ygn15".tr(),
+      "ygn16".tr(), "ygn17".tr(), "ygn18".tr(), "ygn19".tr(), "ygn20".tr(),
+      "ygn21".tr(), "ygn22".tr(), "ygn23".tr(), "ygn24".tr(), "ygn25".tr(),
+      "ygn26".tr(), "ygn27".tr(), "ygn28".tr(), "ygn29".tr(), "ygn30".tr(),
+      "ygn31".tr(), "ygn32".tr(), "ygn33".tr(), "ygn34".tr(), "ygn35".tr(),
+      "ygn36".tr(), "ygn37".tr(), "ygn38".tr(), "ygn39".tr(), "ygn40".tr(),
+      "ygn41".tr(), "ygn42".tr(), "ygn43".tr(), "ygn44".tr(), "ygn45".tr(),
+      "ygn46".tr(),
+    ],
+    "thirteen".tr(): [
+      "shan1".tr(), "shan2".tr(), "shan3".tr(), "shan4".tr(), "shan5".tr(),
+      "shan6".tr(), "shan7".tr(), "shan8".tr(), "shan9".tr(), "shan10".tr(),
+      "shan11".tr(), "shan12".tr(), "shan13".tr(), "shan14".tr(), "shan15".tr(),
+      "shan16".tr(), "shan17".tr(), "shan18".tr(), "shan19".tr(), "shan20".tr(),
+      "shan21".tr(), "shan22".tr(), "shan23".tr(), "shan24".tr(), "shan25".tr(),
+      "shan26".tr(), "shan27".tr(), "shan28".tr(), "shan29".tr(), "shan30".tr(),
+      "shan31".tr(), "shan32".tr(), "shan33".tr(), "shan34".tr(), "shan35".tr(),
+      "shan36".tr(), "shan37".tr(), "shan38".tr(), "shan39".tr(), "shan40".tr(),
+      "shan41".tr(), "shan42".tr(), "shan43".tr(), "shan44".tr(), "shan45".tr(),
+      "shan46".tr(), "shan47".tr(), "shan48".tr(), "shan49".tr(), "shan50".tr(),
+      "shan51".tr(), "shan52".tr(), "shan53".tr(), "shan54".tr(), "shan55".tr(),
+      "shan56".tr(), "shan57".tr(), "shan58".tr(), "shan59".tr(), "shan60".tr(),
+      "shan61".tr(), "shan62".tr(), "shan63".tr(),
+    ],
+    "fourteen".tr(): [
+      "ayawady1".tr(), "ayawady2".tr(), "ayawady3".tr(), "ayawady4".tr(), "ayawady5".tr(),
+      "ayawady6".tr(), "ayawady7".tr(), "ayawady8".tr(), "ayawady9".tr(), "ayawady10".tr(),
+      "ayawady11".tr(), "ayawady12".tr(), "ayawady13".tr(), "ayawady14".tr(), "ayawady15".tr(),
+      "ayawady16".tr(), "ayawady17".tr(), "ayawady18".tr(), "ayawady19".tr(), "ayawady20".tr(),
+      "ayawady21".tr(),
+    ],
   };
 
   final List<Map<String, String>> nrcTypeCodes = [
@@ -192,9 +305,11 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
   );
 
+  // FIXED: Improved township fetching method
   List<String> getTownshipsForState(String? stateDivisionCode) {
     if (stateDivisionCode == null) return [];
-    return townshipCodes[stateDivisionCode] ?? [];
+    final townships = townshipCodes[stateDivisionCode] ?? [];
+    return townships;
   }
 
   // Validation methods
@@ -578,7 +693,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                         DropdownButton<String>(
                           hint: Text("y".tr()),
                           value: fromYear,
-                          onChanged: (value) => setState(() => fromYear = value), // Remove the _studentDataFound check
+                          onChanged: (value) => setState(() => fromYear = value),
                           items: _adminStartYear != null && fromYear != null
                               ? [DropdownMenuItem(value: fromYear, child: Text(fromYear!))]
                               : <DropdownMenuItem<String>>[],
@@ -590,7 +705,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                         DropdownButton<String>(
                           hint: Text("y".tr()),
                           value: toYear,
-                          onChanged: (value) => setState(() => toYear = value), // Remove the _studentDataFound check
+                          onChanged: (value) => setState(() => toYear = value),
                           items: _adminEndYear != null && toYear != null
                               ? [DropdownMenuItem(value: toYear, child: Text(toYear!))]
                               : <DropdownMenuItem<String>>[],
@@ -599,21 +714,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                     ),
                   ),
                 ),
-                Column(
-                  children: [
-                    Container(
-                      width: 70,
-                      height: 90,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.person,
-                          size: 50, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 4),
-                    Text("yourPhoto".tr(),
-                        style: const TextStyle(fontSize: 10),
-                        textAlign: TextAlign.center),
-                  ],
-                ),
+
               ],
             ),
             if (_formSubmitted && (fromYear == null || toYear == null))
@@ -654,7 +755,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
               rollNoController,
               icon: Icons.badge,
               isRequired: true,
-              readOnly: true, // This makes it read-only
+              readOnly: true,
             ),
 
             _buildHorizontalTextField(
@@ -732,7 +833,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
               selectedNRCTypeCode: fatherSelectedNRCTypeCode,
               onUpdate: (val1, val2, val3, val4, val5) {
                 setState(() {
-                  fatherInProcess = val1;
+                  //fatherInProcess = val1;
                   fatherSelectedNRCType = val2;
                   fatherSelectedStateDivisionCode = val3;
                   fatherSelectedTownshipCode = val4;
@@ -856,7 +957,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
         int? maxLength,
         List<TextInputFormatter>? inputFormatters,
         String? Function(String?)? validator,
-        bool readOnly = false, // ADD THIS PARAMETER
+        bool readOnly = false,
       }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -886,10 +987,10 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                 keyboardType: keyboardType,
                 maxLength: maxLength,
                 inputFormatters: inputFormatters,
-                readOnly: readOnly, // USE THE readOnly PARAMETER HERE
+                readOnly: readOnly,
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: readOnly ? Colors.grey[200] : Colors.lightBlue[100], // Different color for read-only
+                  fillColor: readOnly ? Colors.grey[200] : Colors.lightBlue[100],
                   prefixIcon: icon != null ? Icon(icon) : null,
                   contentPadding:
                   const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -910,26 +1011,32 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     );
   }
 
-  Widget _buildDateOfBirthField({required TextEditingController controller, bool isRequired = false}) {
+  // MODIFIED: Added maxAgeYears parameter for student DOB restriction
+  Widget _buildDateOfBirthField({
+    required TextEditingController controller,
+    bool isRequired = false,
+    int? maxAgeYears,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           SizedBox(
-              width: 140,
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: "bDate".tr(),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
+            width: 140,
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: "bDate".tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
           Expanded(
             child: SizedBox(
               height: 45,
@@ -943,11 +1050,25 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                   border: const OutlineInputBorder(),
                 ),
                 onTap: () async {
+                  DateTime lastDate = DateTime.now();
+                  if (maxAgeYears != null) {
+                    lastDate = DateTime(
+                      DateTime.now().year - maxAgeYears,
+                      DateTime.now().month,
+                      DateTime.now().day,
+                    );
+                  }
+
+                  DateTime initialDate = DateTime(2000);
+                  if (initialDate.isAfter(lastDate)) {
+                    initialDate = lastDate;
+                  }
+
                   DateTime? pickedDate = await showDatePicker(
                     context: context,
-                    initialDate: DateTime(2000),
+                    initialDate: initialDate,
                     firstDate: DateTime(1950),
-                    lastDate: DateTime.now(),
+                    lastDate: lastDate,
                   );
                   if (pickedDate != null) {
                     controller.text =
@@ -1113,7 +1234,17 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
             ),
           ),
 
-        _buildDateOfBirthField(controller: dobController, isRequired: true),
+        // Date of Birth field - with age restriction for student only
+        isStudentSection
+            ? _buildDateOfBirthField(
+          controller: dobController,
+          isRequired: true,
+          maxAgeYears: 16,
+        )
+            : _buildDateOfBirthField(
+          controller: dobController,
+          isRequired: true,
+        ),
         if (formSubmitted && dobController.text.trim().isEmpty)
           Padding(
             padding: const EdgeInsets.only(left: 140, top: 4),
@@ -1137,6 +1268,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
         if (isStudentSection) _buildGenderSelector(),
 
         const SizedBox(height: 20),
+        // Pass isStudentSection to determine whether to show "In process" checkbox
         _buildParentNRCSection(
           inProcess: inProcess,
           selectedNRCType: selectedNRCType,
@@ -1146,11 +1278,13 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
           nrcController: nrcController,
           onUpdate: onUpdate,
           formSubmitted: formSubmitted,
+          showInProcessCheckbox: isStudentSection, // Only show checkbox for student section
         ),
       ],
     );
   }
 
+// Modified NRC section with optional "In process" checkbox
   Widget _buildParentNRCSection({
     required bool inProcess,
     required NRCType selectedNRCType,
@@ -1160,6 +1294,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     required TextEditingController nrcController,
     required Function(bool, NRCType, String?, String?, String?) onUpdate,
     required bool formSubmitted,
+    bool showInProcessCheckbox = true, // New parameter
   }) {
     // Get townships based on selected state/division
     List<String> availableTownships = getTownshipsForState(selectedStateDivisionCode);
@@ -1167,25 +1302,26 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AbsorbPointer(
-          absorbing: _studentDataFound,
-          child: Row(
-            children: [
-              ElevatedButton(
-                onPressed: () => onUpdate(
-                  false,
-                  NRCType.nrc,
-                  selectedStateDivisionCode,
-                  selectedTownshipCode,
-                  selectedNRCTypeCode,
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: selectedNRCType == NRCType.nrc
-                      ? Colors.lightBlue[100]
-                      : null,
-                ),
-                child: Text("nrc".tr()),
+        // NRC Button and optional In Process checkbox row
+        Row(
+          children: [
+            ElevatedButton(
+              onPressed: () => onUpdate(
+                false,
+                NRCType.nrc,
+                selectedStateDivisionCode,
+                selectedTownshipCode,
+                selectedNRCTypeCode,
               ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedNRCType == NRCType.nrc
+                    ? Colors.lightBlue[100]
+                    : null,
+              ),
+              child: Text("nrc".tr()),
+            ),
+            // Only show the "In Process" checkbox if showInProcessCheckbox is true
+            if (showInProcessCheckbox) ...[
               const SizedBox(width: 16),
               Row(
                 children: [
@@ -1207,10 +1343,13 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                 ],
               ),
             ],
-          ),
+          ],
         ),
+
         const SizedBox(height: 10),
+
         // NRC input - Only show if NRC is selected and NOT in process
+        // For parent sections (showInProcessCheckbox = false), inProcess is always false
         if (selectedNRCType == NRCType.nrc && !inProcess)
           AbsorbPointer(
             absorbing: _studentDataFound,
@@ -1223,56 +1362,43 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                       flex: 1,
                       child: DropdownButtonFormField<String>(
                         decoration: dropdownDecoration(),
-                        value: stateDivisionCodes.contains(selectedStateDivisionCode)
-                            ? selectedStateDivisionCode
-                            : null,
+                        value: selectedStateDivisionCode,
                         items: stateDivisionCodes
                             .map((code) => DropdownMenuItem(
                           value: code,
                           child: Text(code),
                         ))
                             .toList(),
-                        onChanged: (val) => onUpdate(
-                            inProcess, selectedNRCType, val, null, selectedNRCTypeCode),
+                        onChanged: (val) {
+                          // When state changes, clear township and update
+                          onUpdate(inProcess, selectedNRCType, val, null, selectedNRCTypeCode);
+                        },
                       ),
                     ),
                     const SizedBox(width: 4),
                     // Township dropdown
                     Expanded(
                       flex: 2,
-                      child: AbsorbPointer(
-                        absorbing: false, // ✅ allow interaction
-                        child: DropdownButtonFormField<String>(
-                          decoration: dropdownDecoration(),
-                          value: availableTownships.contains(selectedTownshipCode)
-                              ? selectedTownshipCode
-                              : null,
-                          items: availableTownships
-                              .map((code) => DropdownMenuItem(
-                            value: code,
-                            child: Text(code),
-                          ))
-                              .toList(),
-                          onChanged: (val) => onUpdate(
-                            inProcess,
-                            selectedNRCType,
-                            selectedStateDivisionCode,
-                            val,
-                            selectedNRCTypeCode,
-                          ),
-                        ),
+                      child: DropdownButtonFormField<String>(
+                        decoration: dropdownDecoration(),
+                        value: selectedTownshipCode,
+                        items: availableTownships
+                            .map((code) => DropdownMenuItem(
+                          value: code,
+                          child: Text(code),
+                        ))
+                            .toList(),
+                        onChanged: (val) => onUpdate(inProcess, selectedNRCType,
+                            selectedStateDivisionCode, val, selectedNRCTypeCode),
                       ),
                     ),
-
                     const SizedBox(width: 4),
                     // NRC Type dropdown
                     Expanded(
                       flex: 2,
                       child: DropdownButtonFormField<String>(
                         decoration: dropdownDecoration(),
-                        value: nrcTypeCodes.any((type) => type['code'] == selectedNRCTypeCode)
-                            ? selectedNRCTypeCode
-                            : null,
+                        value: selectedNRCTypeCode,
                         items: nrcTypeCodes
                             .map((type) => DropdownMenuItem(
                           value: type['code'],
@@ -1322,43 +1448,42 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                   ),
 
                 const SizedBox(height: 10),
-                // NRC Number field - only show if not in process
-                if (!inProcess)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: SizedBox(
-                      height: 45,
-                      child: TextFormField(
-                        controller: nrcController,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly, // allow only digits
-                        ],
-                        decoration: InputDecoration(
-                          counterText: "",
-                          filled: true,
-                          fillColor: Colors.lightBlue[100],
-                          prefixIcon: const Icon(Icons.badge),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 12,
-                            horizontal: 8,
-                          ),
-                          border: const OutlineInputBorder(),
-                          errorText: nrcController.text.isNotEmpty &&
-                              nrcController.text.length != 6
-                              ? "nrcMustBe6Digits".tr()
-                              : null,
+                // NRC Number field
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: SizedBox(
+                    height: 45,
+                    child: TextFormField(
+                      controller: nrcController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: InputDecoration(
+                        counterText: "",
+                        filled: true,
+                        fillColor: Colors.lightBlue[100],
+                        prefixIcon: const Icon(Icons.badge),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
                         ),
-                        onChanged: (value) {
-                          setState(() {}); // Trigger rebuild for validation
-                        },
+                        border: const OutlineInputBorder(),
+                        errorText: nrcController.text.isNotEmpty &&
+                            nrcController.text.length != 6
+                            ? "nrcMustBe6Digits".tr()
+                            : null,
                       ),
+                      onChanged: (value) {
+                        setState(() {});
+                      },
                     ),
                   ),
+                ),
 
                 // Validation error for NRC number
-                if (formSubmitted && !inProcess && nrcController.text.trim().isEmpty)
+                if (formSubmitted && nrcController.text.trim().isEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
@@ -1366,7 +1491,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                       style: const TextStyle(color: Colors.red, fontSize: 12),
                     ),
                   ),
-                if (formSubmitted && !inProcess && nrcController.text.trim().isNotEmpty && nrcController.text.trim().length != 6)
+                if (formSubmitted && nrcController.text.trim().isNotEmpty && nrcController.text.trim().length != 6)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
@@ -1469,6 +1594,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
           "scontactNumber": phoneController.text.trim(),
           "smajor": smajor,
           "stype": stype,
+          // In _submitForm method, update the parents section:
           "parents": {
             "father": {
               "fname_mm": fatherNameMyanmarController.text.trim(),
@@ -1481,7 +1607,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
               "fnrc_state_division": fatherSelectedStateDivisionCode,
               "fnrc_township": fatherSelectedTownshipCode,
               "fnrc_type": fatherSelectedNRCTypeCode,
-              "fnrc_in_process": fatherInProcess,
+              "fnrc_in_process": false, // Always false for parents
             },
             "mother": {
               "mname_mm": motherNameMyanmarController.text.trim(),
@@ -1494,7 +1620,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
               "mnrc_state_division": motherSelectedStateDivisionCode,
               "mnrc_township": motherSelectedTownshipCode,
               "mnrc_type": motherSelectedNRCTypeCode,
-              "mnrc_in_process": motherInProcess,
+              "mnrc_in_process": false, // Always false for parents
             }
           },
           "academicInfo": {
@@ -1534,12 +1660,16 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
           SnackBar(content: Text("✅ ${tr('enrollmentSuccess')}")),
         );
 
+        // FIXED: Pass courseYear parameter when navigating to payment
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => NewStudentPaymentQR(
+            builder: (context) => NewStudentPhotoUpload(
+              studentData: {}, // Pass courseYear here
               rollNo: rollNoController.text.trim(),
               studentName: nameEnglishController.text.trim(),
+              courseYear: selectedCourseYear,
+
             ),
           ),
         );

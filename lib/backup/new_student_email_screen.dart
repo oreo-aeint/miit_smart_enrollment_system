@@ -12,6 +12,85 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:miit_project/screens/old_student_form_review.dart';
 import 'package:miit_project/screens/new_student_form_review.dart';
 
+
+// Animated Loading Dots Widget
+class AnimatedLoadingDots extends StatefulWidget {
+  final Color color;
+
+  const AnimatedLoadingDots({Key? key, this.color = Colors.white}) : super(key: key);
+
+  @override
+  State<AnimatedLoadingDots> createState() => _AnimatedLoadingDotsState();
+}
+
+class _AnimatedLoadingDotsState extends State<AnimatedLoadingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildAnimatedDot(0),
+        const SizedBox(width: 8),
+        _buildAnimatedDot(1),
+        const SizedBox(width: 8),
+        _buildAnimatedDot(2),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedDot(int index) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final delay = index * 0.3;
+        double value = (_controller.value + delay) % 1.0;
+        double scale = 0.3 + (value * 0.7);
+        double opacity = 0.3 + (value * 0.7);
+
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: opacity,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withOpacity(0.5),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class NewStudentEmailScreen extends StatefulWidget {
   const NewStudentEmailScreen({super.key});
 
@@ -24,6 +103,7 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
   String fullName = '';
   String admissionNo = '';
   bool _isFirebaseInitialized = false;
+  bool isLoading = false; // Added missing isLoading variable
 
   final TextEditingController fullNameController = TextEditingController();
   final TextEditingController admissionNoController = TextEditingController();
@@ -128,16 +208,9 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
       return;
     }
 
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      },
-    );
+    setState(() {
+      isLoading = true;
+    });
 
     try {
       // First, get the admin academic year
@@ -147,8 +220,10 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
           .get();
 
       if (!adminDoc.exists) {
-        Navigator.pop(context);
         _showAlert(tr("error"), tr("adminYearNotSet"));
+        setState(() {
+          isLoading = false;
+        });
         return;
       }
 
@@ -174,7 +249,9 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
         final studentEndYear = academicInfo['end_year'] as int?;
         final studentType = studentData['stype'] as String?;
 
-        Navigator.pop(context); // Close loading dialog
+        setState(() {
+          isLoading = false;
+        });
 
         // 🎯 CHECK 1: Is this an OLD student?
         if (studentType == 'old') {
@@ -216,7 +293,9 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
 
       final docSnapshot = await docRef.get();
 
-      Navigator.pop(context); // Close loading dialog
+      setState(() {
+        isLoading = false;
+      });
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data() as Map<String, dynamic>;
@@ -240,7 +319,9 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
         _showAlert(tr("notFound"), tr("rollNumberNotFound"));
       }
     } catch (e) {
-      Navigator.pop(context);
+      setState(() {
+        isLoading = false;
+      });
       _showAlert(tr("error"), "${tr("checkingError")}: ${e.toString()}");
     }
   }
@@ -441,7 +522,7 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
                 height: 45,
                 child: TextField(
                   controller: fullNameController,
-                  style: const TextStyle(color: Colors.black), // Changed to black
+                  style: const TextStyle(color: Colors.black),
                   decoration: InputDecoration(
                     labelText: tr('fullName'),
                     labelStyle: const TextStyle(color: Colors.indigo),
@@ -470,7 +551,7 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
                     child: TextField(
                       controller: admissionNoController,
                       style: TextStyle(
-                        color: hasError ? Colors.red : Colors.black, // Changed to black
+                        color: hasError ? Colors.red : Colors.black,
                       ),
                       decoration: InputDecoration(
                         labelText: tr('rollNo1'),
@@ -524,11 +605,20 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Submit button (localized)
-              ActionButton(
-                text: tr("check1"),
-                icon: Icons.fact_check_rounded,
-                onPressed: _submitForm,
+              // Submit button - FIXED: Changed _checkAndNavigate to _submitForm
+              SizedBox(
+                width: 170,
+                child: isLoading
+                    ? const Center(
+                  child: AnimatedLoadingDots(
+                    color: Colors.indigo,
+                  ),
+                )
+                    : ActionButton(
+                  text: tr("check"),
+                  icon: Icons.fact_check_rounded,
+                  onPressed: _submitForm, // Changed from _checkAndNavigate to _submitForm
+                ),
               ),
 
               const Spacer(),

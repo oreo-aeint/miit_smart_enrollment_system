@@ -2,11 +2,12 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'screens/home_screen.dart';
-import 'firebase_options.dart'; // 🔹 Required for web
-import 'package:path_provider/path_provider.dart'; // Add this
+import 'firebase_options.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,7 +16,7 @@ Future<void> main() async {
   // Load .env file
   await dotenv.load(fileName: ".env");
 
-  // Optional: Test path_provider (your existing test – OK to keep)
+  // Optional: Test path_provider
   try {
     print('🔧 Testing path_provider...');
     final tempDir = await getTemporaryDirectory();
@@ -24,13 +25,23 @@ Future<void> main() async {
     print('❌ path_provider error: $e');
   }
 
-  // 🔥 Initialize Supabase (THIS is the connection)
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
+  // 🔥 Initialize Supabase - SIMPLE VERSION (no custom client)
+  final supabaseUrl = dotenv.env['SUPABASE_URL']!;
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY']!;
 
-  // 🔥 Firebase can still stay
+  print('🔧 Initializing Supabase with URL: $supabaseUrl');
+
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+    print('✅ Supabase initialized successfully');
+  } catch (e) {
+    print('❌ Supabase initialization failed: $e');
+  }
+
+  // Firebase initialization
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -47,7 +58,6 @@ Future<void> main() async {
     ),
   );
 }
-
 
 class MIITApp extends StatelessWidget {
   const MIITApp({super.key});

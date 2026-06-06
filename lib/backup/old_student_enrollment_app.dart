@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:miit_project/components/button.dart';
 import 'package:miit_project/components/text.dart';
-import 'enrollment_flow_screen.dart';
 import 'my_drawer.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:miit_project/screens/old_student_payment.dart';
-import '../components/enrollment_photo_controller.dart';
-import 'old_student_photo_uploading_screen.dart';
+import 'old_stu_photo.dart';
 
 enum NRCType { nrc, oldNrc, none }
 
@@ -17,13 +15,10 @@ class OldStudentEnrollmentApp extends StatefulWidget {
   final Map<String, dynamic>? studentData;
   final String? studentId;
 
-  final dynamic photoController;
-
   const OldStudentEnrollmentApp({
     Key? key,
     this.studentData,
     this.studentId,
-    this.photoController,
   }) : super(key: key);
 
   @override
@@ -37,25 +32,20 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   final List<String> _majorList = ['CSE', 'ECE'];
   List<String?> _selectedMajors = [];
 
-  // This variable will hold the major chosen in the first row.
-  // It's declared at the level of your Widget's State class.
-
   bool studentInProcess = false;
   NRCType studentSelectedNRCType = NRCType.nrc;
 
-  final List<String> years =
-  List.generate(10, (index) => (2025 + index).toString());
+  final List<String> years = List.generate(10, (index) => (2025 + index).toString());
 
   @override
   void initState() {
     super.initState();
-    // Initialize the list with null values for all rows
-    _populateFormData();
     _selectedMajors = List.filled(_semesterList.length, null);
     for (int i = 0; i < _semesterList.length; i++) {
       _yearControllers.add(TextEditingController());
       _gradeControllers.add(TextEditingController());
     }
+    _populateFormData();
   }
 
   String? fromYear;
@@ -63,22 +53,22 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   int? _adminStartYear;
   int? _adminEndYear;
   String selectedGender = 'Male';
+
   final List<String> courseYears = [
     "secYear".tr(),
     "thirdYear".tr(),
     "fourthYear".tr(),
     "finalYear".tr(),
-    "master1".tr(),
     "master2".tr(),
   ];
+
   String? selectedCourseYear;
 
   // Student Controllers
   final TextEditingController courseYearController = TextEditingController();
   final TextEditingController rollNoController = TextEditingController();
   final TextEditingController registrationNoController = TextEditingController();
-  final TextEditingController yearOfUniversityController =
-  TextEditingController();
+  final TextEditingController yearOfUniversityController = TextEditingController();
   final TextEditingController nameMyanmarController = TextEditingController();
   final TextEditingController nameEnglishController = TextEditingController();
   final TextEditingController religionController = TextEditingController();
@@ -92,12 +82,9 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   String? studentSelectedNRCTypeCode;
 
   // Father Controllers
-  final TextEditingController fatherNameMyanmarController =
-  TextEditingController();
-  final TextEditingController fatherNameEnglishController =
-  TextEditingController();
-  final TextEditingController fatherReligionController =
-  TextEditingController();
+  final TextEditingController fatherNameMyanmarController = TextEditingController();
+  final TextEditingController fatherNameEnglishController = TextEditingController();
+  final TextEditingController fatherReligionController = TextEditingController();
   final TextEditingController fatherPhoneController = TextEditingController();
   final TextEditingController fatherDobController = TextEditingController();
   final TextEditingController fatherNRCController = TextEditingController();
@@ -114,12 +101,9 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   NRCType fatherSelectedNRCType = NRCType.nrc;
 
   // Mother Controllers
-  final TextEditingController motherNameMyanmarController =
-  TextEditingController();
-  final TextEditingController motherNameEnglishController =
-  TextEditingController();
-  final TextEditingController motherReligionController =
-  TextEditingController();
+  final TextEditingController motherNameMyanmarController = TextEditingController();
+  final TextEditingController motherNameEnglishController = TextEditingController();
+  final TextEditingController motherReligionController = TextEditingController();
   final TextEditingController motherPhoneController = TextEditingController();
   final TextEditingController motherDobController = TextEditingController();
   final TextEditingController motherNRCController = TextEditingController();
@@ -131,148 +115,145 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   bool motherInProcess = false;
   NRCType motherSelectedNRCType = NRCType.nrc;
 
-  final Map<String, String> stateDivisionCodes = {
-    "8": "eight".tr(),
-    "9": "nine".tr(),
-    "12": "twelve".tr(),
-  };
+  final List<String> stateDivisionCodes = [
+    "one".tr(),     // Kachin
+    "two".tr(),     // Kayah
+    "three".tr(),   // Kayin
+    "four".tr(),    // Chin
+    "five".tr(),    // Sagaing
+    "six".tr(),     // Tanintharyi
+    "seven".tr(),   // Bago
+    "eight".tr(),   // Magway
+    "nine".tr(),    // Mandalay
+    "ten".tr(),     // Mon
+    "eleven".tr(),  // Rakhine
+    "twelve".tr(),  // Yangon
+    "thirteen".tr(),// Shan
+    "fourteen".tr(),// Ayeyarwady
+  ];
 
-
-  // Fixed township codes with unique values
   final Map<String, List<String>> townshipCodes = {
-    "9": [
-      // Mandalay
-      "mdy1".tr(),
-      "mdy2".tr(),
-      "mdy3".tr(),
-      "mdy4".tr(),
-      "mdy5".tr(),
-      "mdy6".tr(),
-      "mdy7".tr(),
-      "mdy8".tr(),
-      "mdy9".tr(),
-      "mdy10".tr(),
-      "mdy11".tr(),
-      "mdy12".tr(),
-      "mdy13".tr(),
-      "mdy14".tr(),
-      "mdy15".tr(),
-      "mdy16".tr(),
-      "mdy17".tr(),
-      "mdy18".tr(),
-      "mdy19".tr(),
-      "mdy20".tr(),
-      "mdy21".tr(),
-      "mdy22".tr(),
-      "mdy23".tr(),
-      "mdy24".tr(),
-      "mdy25".tr(),
-      "mdy26".tr(),
-      "mdy27".tr(),
-      "mdy28".tr(),
-      "mdy29".tr(),
-      "mdy30".tr(),
-      "mdy31".tr(),
-      "mdy32".tr(),
-      "mdy33".tr(),
-      "mdy34".tr(),
-      "mdy35".tr(),
-      "mdy36".tr(),
-      "mdy37".tr(),
-      "mdy38".tr(),
-      "mdy39".tr(),
-      "mdy40".tr(),
-      "mdy41".tr(),
-      "mdy42".tr(),
-      "mdy43".tr(),
-      "mdy44".tr(),
-      "mdy45".tr(),
+    "one".tr(): [
+      "kachin1".tr(), "kachin2".tr(), "kachin3".tr(), "kachin4".tr(), "kachin5".tr(),
+      "kachin6".tr(), "kachin7".tr(), "kachin8".tr(), "kachin9".tr(), "kachin10".tr(),
+      "kachin11".tr(), "kachin12".tr(), "kachin13".tr(), "kachin14".tr(), "kachin15".tr(),
+      "kachin16".tr(), "kachin17".tr(), "kachin18".tr(), "kachin19".tr(), "kachin20".tr(),
+      "kachin21".tr(), "kachin22".tr(), "kachin23".tr(), "kachin24".tr(), "kachin25".tr(),
+      "kachin26".tr(), "kachin27".tr(), "kachin28".tr(), "kachin29".tr(), "kachin30".tr(),
     ],
-    "12": [
-      // Yangon
-      "ygn1".tr(),
-      "ygn2".tr(),
-      "ygn3".tr(),
-      "ygn4".tr(),
-      "ygn5".tr(),
-      "ygn6".tr(),
-      "ygn7".tr(),
-      "ygn8".tr(),
-      "ygn9".tr(),
-      "ygn10".tr(),
-      "ygn11".tr(),
-      "ygn12".tr(),
-      "ygn13".tr(),
-      "ygn14".tr(),
-      "ygn15".tr(),
-      "ygn16".tr(),
-      "ygn17".tr(),
-      "ygn18".tr(),
-      "ygn19".tr(),
-      "ygn20".tr(),
-      "ygn21".tr(),
-      "ygn22".tr(),
-      "ygn23".tr(),
-      "ygn24".tr(),
-      "ygn25".tr(),
-      "ygn26".tr(),
-      "ygn27".tr(),
-      "ygn28".tr(),
-      "ygn29".tr(),
-      "ygn30".tr(),
-      "ygn31".tr(),
-      "ygn32".tr(),
-      "ygn33".tr(),
-      "ygn34".tr(),
-      "ygn35".tr(),
-      "ygn36".tr(),
-      "ygn37".tr(),
-      "ygn38".tr(),
-      "ygn39".tr(),
-      "ygn40".tr(),
-      "ygn41".tr(),
-      "ygn42".tr(),
-      "ygn43".tr(),
-      "ygn44".tr(),
-      "ygn45".tr(),
+    "two".tr(): [
+      "kayah1".tr(), "kayah2".tr(), "kayah3".tr(), "kayah4".tr(), "kayah5".tr(),
+      "kayah6".tr(), "kayah7".tr(), "kayah8".tr(), "kayah9".tr(),
+    ],
+    "three".tr(): [
+      "kayin1".tr(), "kayin2".tr(), "kayin3".tr(), "kayin4".tr(), "kayin5".tr(),
+      "kayin6".tr(), "kayin7".tr(), "kayin8".tr(), "kayin9".tr(), "kayin10".tr(),
+      "kayin11".tr(), "kayin12".tr(), "kayin13".tr(), "kayin14".tr(), "kayin15".tr(),
+      "kayin16".tr(), "kayin17".tr(),
+    ],
+    "four".tr(): [
+      "chin1".tr(), "chin2".tr(), "chin3".tr(), "chin4".tr(), "chin5".tr(),
+      "chin6".tr(), "chin7".tr(), "chin8".tr(), "chin9".tr(), "chin10".tr(),
+      "chin11".tr(), "chin12".tr(), "chin13".tr(),
+    ],
+    "five".tr(): [
+      "sagaing1".tr(), "sagaing2".tr(), "sagaing3".tr(), "sagaing4".tr(), "sagaing5".tr(),
+      "sagaing6".tr(), "sagaing7".tr(), "sagaing8".tr(), "sagaing9".tr(), "sagaing10".tr(),
+      "sagaing11".tr(), "sagaing12".tr(), "sagaing13".tr(), "sagaing14".tr(), "sagaing15".tr(),
+      "sagaing16".tr(), "sagaing17".tr(), "sagaing18".tr(), "sagaing19".tr(), "sagaing20".tr(),
+      "sagaing21".tr(), "sagaing22".tr(), "sagaing23".tr(), "sagaing24".tr(), "sagaing25".tr(),
+      "sagaing26".tr(), "sagaing27".tr(), "sagaing28".tr(), "sagaing29".tr(), "sagaing30".tr(),
+      "sagaing31".tr(), "sagaing32".tr(), "sagaing33".tr(), "sagaing34".tr(), "sagaing35".tr(),
+      "sagaing36".tr(), "sagaing37".tr(), "sagaing38".tr(), "sagaing39".tr(), "sagaing40".tr(),
+      "sagaing41".tr(), "sagaing42".tr(), "sagaing43".tr(), "sagaing44".tr(), "sagaing45".tr(),
+      "sagaing46".tr(), "sagaing47".tr(),
+    ],
+    "six".tr(): [
+      "ta1".tr(), "ta2".tr(), "ta3".tr(), "ta4".tr(), "ta5".tr(),
+      "ta6".tr(), "ta7".tr(), "ta8".tr(), "ta9".tr(), "ta10".tr(),
+      "ta11".tr(), "ta12".tr(), "ta13".tr(), "ta14".tr(), "ta15".tr(),
+      "ta16".tr(), "ta17".tr(), "ta18".tr(),
+    ],
+    "seven".tr(): [
+      "bago1".tr(), "bago2".tr(), "bago3".tr(), "bago4".tr(), "bago5".tr(),
+      "bago6".tr(), "bago7".tr(), "bago8".tr(), "bago9".tr(), "bago10".tr(),
+      "bago11".tr(), "bago12".tr(), "bago13".tr(), "bago14".tr(), "bago15".tr(),
+      "bago16".tr(), "bago17".tr(), "bago18".tr(), "bago19".tr(), "bago20".tr(),
+      "bago21".tr(), "bago22".tr(), "bago23".tr(), "bago24".tr(), "bago25".tr(),
+      "bago26".tr(), "bago27".tr(), "bago28".tr(), "bago29".tr(), "bago30".tr(),
+      "bago31".tr(), "bago32".tr(), "bago33".tr(), "bago34".tr(),
+    ],
+    "eight".tr(): [
+      "mg1".tr(), "mg2".tr(), "mg3".tr(), "mg4".tr(), "mg5".tr(),
+      "mg6".tr(), "mg7".tr(), "mg8".tr(), "mg9".tr(), "mg10".tr(),
+      "mg11".tr(), "mg12".tr(), "mg13".tr(), "mg14".tr(), "mg15".tr(),
+      "mg16".tr(), "mg17".tr(), "mg18".tr(), "mg19".tr(), "mg20".tr(),
+      "mg21".tr(), "mg22".tr(), "mg23".tr(), "mg24".tr(), "mg25".tr(),
+      "mg26".tr(), "mg27".tr(),
+    ],
+    "nine".tr(): [
+      "mdy1".tr(), "mdy2".tr(), "mdy3".tr(), "mdy4".tr(), "mdy5".tr(),
+      "mdy6".tr(), "mdy7".tr(), "mdy8".tr(), "mdy9".tr(), "mdy10".tr(),
+      "mdy11".tr(), "mdy12".tr(), "mdy13".tr(), "mdy14".tr(), "mdy15".tr(),
+      "mdy16".tr(), "mdy17".tr(), "mdy18".tr(), "mdy19".tr(), "mdy20".tr(),
+      "mdy21".tr(), "mdy22".tr(), "mdy23".tr(), "mdy24".tr(), "mdy25".tr(),
+      "mdy26".tr(), "mdy27".tr(), "mdy28".tr(), "mdy29".tr(), "mdy30".tr(),
+      "mdy31".tr(), "mdy32".tr(), "mdy33".tr(), "mdy34".tr(), "mdy35".tr(),
+      "mdy36".tr(), "mdy37".tr(), "mdy38".tr(), "mdy39".tr(), "mdy40".tr(),
+      "mdy41".tr(), "mdy42".tr(), "mdy43".tr(), "mdy44".tr(), "mdy45".tr(),
+    ],
+    "ten".tr(): [
+      "mon1".tr(), "mon2".tr(), "mon3".tr(), "mon4".tr(), "mon5".tr(),
+      "mon6".tr(), "mon7".tr(), "mon8".tr(), "mon9".tr(), "mon10".tr(),
+      "mon11".tr(), "mon12".tr(), "mon13".tr(),
+    ],
+    "eleven".tr(): [
+      "yakine1".tr(), "yakine2".tr(), "yakine3".tr(), "yakine4".tr(), "yakine5".tr(),
+      "yakine6".tr(), "yakine7".tr(), "yakine8".tr(), "yakine9".tr(), "yakine10".tr(),
+      "yakine11".tr(), "yakine12".tr(), "yakine13".tr(), "yakine14".tr(), "yakine15".tr(),
+      "yakine16".tr(), "yakine17".tr(), "yakine18".tr(), "yakine19".tr(), "yakine20".tr(),
+    ],
+    "twelve".tr(): [
+      "ygn1".tr(), "ygn2".tr(), "ygn3".tr(), "ygn4".tr(), "ygn5".tr(),
+      "ygn6".tr(), "ygn7".tr(), "ygn8".tr(), "ygn9".tr(), "ygn10".tr(),
+      "ygn11".tr(), "ygn12".tr(), "ygn13".tr(), "ygn14".tr(), "ygn15".tr(),
+      "ygn16".tr(), "ygn17".tr(), "ygn18".tr(), "ygn19".tr(), "ygn20".tr(),
+      "ygn21".tr(), "ygn22".tr(), "ygn23".tr(), "ygn24".tr(), "ygn25".tr(),
+      "ygn26".tr(), "ygn27".tr(), "ygn28".tr(), "ygn29".tr(), "ygn30".tr(),
+      "ygn31".tr(), "ygn32".tr(), "ygn33".tr(), "ygn34".tr(), "ygn35".tr(),
+      "ygn36".tr(), "ygn37".tr(), "ygn38".tr(), "ygn39".tr(), "ygn40".tr(),
+      "ygn41".tr(), "ygn42".tr(), "ygn43".tr(), "ygn44".tr(), "ygn45".tr(),
       "ygn46".tr(),
     ],
-    "8": [
-      // Magway
-      "mg1".tr(),
-      "mg2".tr(),
-      "mg3".tr(),
-      "mg4".tr(),
-      "mg5".tr(),
-      "mg6".tr(),
-      "mg7".tr(),
-      "mg8".tr(),
-      "mg9".tr(),
-      "mg10".tr(),
-      "mg11".tr(),
-      "mg12".tr(),
-      "mg13".tr(),
-      "mg14".tr(),
-      "mg15".tr(),
-      "mg16".tr(),
-      "mg17".tr(),
-      "mg18".tr(),
-      "mg19".tr(),
-      "mg20".tr(),
-      "mg21".tr(),
-      "mg22".tr(),
-      "mg23".tr(),
-      "mg24".tr(),
-      "mg25".tr(),
-      "mg26".tr(),
-      "mg27".tr(),
+    "thirteen".tr(): [
+      "shan1".tr(), "shan2".tr(), "shan3".tr(), "shan4".tr(), "shan5".tr(),
+      "shan6".tr(), "shan7".tr(), "shan8".tr(), "shan9".tr(), "shan10".tr(),
+      "shan11".tr(), "shan12".tr(), "shan13".tr(), "shan14".tr(), "shan15".tr(),
+      "shan16".tr(), "shan17".tr(), "shan18".tr(), "shan19".tr(), "shan20".tr(),
+      "shan21".tr(), "shan22".tr(), "shan23".tr(), "shan24".tr(), "shan25".tr(),
+      "shan26".tr(), "shan27".tr(), "shan28".tr(), "shan29".tr(), "shan30".tr(),
+      "shan31".tr(), "shan32".tr(), "shan33".tr(), "shan34".tr(), "shan35".tr(),
+      "shan36".tr(), "shan37".tr(), "shan38".tr(), "shan39".tr(), "shan40".tr(),
+      "shan41".tr(), "shan42".tr(), "shan43".tr(), "shan44".tr(), "shan45".tr(),
+      "shan46".tr(), "shan47".tr(), "shan48".tr(), "shan49".tr(), "shan50".tr(),
+      "shan51".tr(), "shan52".tr(), "shan53".tr(), "shan54".tr(), "shan55".tr(),
+      "shan56".tr(), "shan57".tr(), "shan58".tr(), "shan59".tr(), "shan60".tr(),
+      "shan61".tr(), "shan62".tr(), "shan63".tr(),
+    ],
+    "fourteen".tr(): [
+      "ayawady1".tr(), "ayawady2".tr(), "ayawady3".tr(), "ayawady4".tr(), "ayawady5".tr(),
+      "ayawady6".tr(), "ayawady7".tr(), "ayawady8".tr(), "ayawady9".tr(), "ayawady10".tr(),
+      "ayawady11".tr(), "ayawady12".tr(), "ayawady13".tr(), "ayawady14".tr(), "ayawady15".tr(),
+      "ayawady16".tr(), "ayawady17".tr(), "ayawady18".tr(), "ayawady19".tr(), "ayawady20".tr(),
+      "ayawady21".tr(),
     ],
   };
+
   final List<Map<String, String>> nrcTypeCodes = [
     {"code": "C", "myanmar": "နိုင်"},
     {"code": "NC", "myanmar": "ပြု"},
     {"code": "AC", "myanmar": "ဧည့်"},
-    {"code": "AMT", "myanmar": "အ�မတ"},
+    {"code": "AMT", "myanmar": "အမတ"},
     {"code": "FRC", "myanmar": "FRC"},
     {"code": "V", "myanmar": "စ"},
     {"code": "M", "myanmar": "သ"},
@@ -298,7 +279,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
 
   @override
   void dispose() {
-    // Student Controllers
     courseYearController.dispose();
     rollNoController.dispose();
     registrationNoController.dispose();
@@ -310,8 +290,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     dobController.dispose();
     nrcNumberController.dispose();
     addressController.dispose();
-
-    // Father Controllers
     fatherNameMyanmarController.dispose();
     fatherNameEnglishController.dispose();
     fatherReligionController.dispose();
@@ -319,8 +297,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     fatherDobController.dispose();
     fatherNRCController.dispose();
     fatherAddressController.dispose();
-
-    // Mother Controllers
     motherNameMyanmarController.dispose();
     motherNameEnglishController.dispose();
     motherReligionController.dispose();
@@ -328,7 +304,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     motherDobController.dispose();
     motherNRCController.dispose();
     motherAddressController.dispose();
-    // Dispose of all controllers
     for (var controller in _yearControllers) {
       controller.dispose();
     }
@@ -338,19 +313,37 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     super.dispose();
   }
 
-  // Define dim color for text only
   final Color _dimTextColor = Colors.grey[600]!;
 
-  InputDecoration dropdownDecoration({bool isReadOnly = false}) =>
-      InputDecoration(
-        filled: true,
-        fillColor: Colors.lightBlue[100],
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      );
+  InputDecoration dropdownDecoration({bool isReadOnly = false}) => InputDecoration(
+    filled: true,
+    fillColor: Colors.lightBlue[100],
+    border: const OutlineInputBorder(),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+  );
+
+  // Helper method for responsive width
+  double _getLabelWidth(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) return 110;
+    if (screenWidth < 400) return 130;
+    return 140;
+  }
+
+  // Helper method for responsive text size
+  double _getResponsiveTextSize(BuildContext context, double size) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) return size * 0.85;
+    if (screenWidth < 400) return size * 0.9;
+    return size;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final labelWidth = _getLabelWidth(context);
+    final textScale = _getResponsiveTextSize(context, 1.0);
+
     return Scaffold(
       backgroundColor: Colors.white,
       drawer: const MyDrawer(),
@@ -364,8 +357,8 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF87CEFA), // Light Sky Blue
-                Color(0xFFADD8E6), // Light Blue
+                Color(0xFF87CEFA),
+                Color(0xFFADD8E6),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -374,7 +367,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         ),
         title: Row(
           children: [
-            // Drawer / Logo
             Builder(
               builder: (context) {
                 return GestureDetector(
@@ -385,27 +377,24 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                     padding: const EdgeInsets.only(left: 8.0),
                     child: Image.asset(
                       'assets/img_2.png',
-                      width: 50,
-                      height: 50,
+                      width: screenWidth < 360 ? 40 : 50,
+                      height: screenWidth < 360 ? 40 : 50,
                     ),
                   ),
                 );
               },
             ),
             const SizedBox(width: 12),
-
-            // Title Text (localized)
             Expanded(
               child: Text(
                 tr("enrollment"),
-                style: AppTextStyles.heading,
+                style: AppTextStyles.heading.copyWith(
+                  fontSize: screenWidth < 360 ? 18 : 20,
+                ),
               ),
             ),
-
-            // Language Switch Dropdown (Top-Right)
             Padding(
-              padding:
-              const EdgeInsets.only(right: 16.0), // moves dropdown left a bit
+              padding: const EdgeInsets.only(right: 16.0),
               child: DropdownButton<Locale>(
                 underline: const SizedBox(),
                 icon: const Icon(Icons.language, color: Colors.black),
@@ -430,12 +419,17 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: EdgeInsets.all(screenWidth < 360 ? 8 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Academic Year + Passport Photo
+            // In the build method, replace the academic year section with this original Row layout:
+
+// Academic Year Row - KEPT EXACTLY AS ORIGINAL
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -451,8 +445,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                         ),
                         const SizedBox(width: 5),
                         Text("from".tr(),
-                            style: const TextStyle(fontWeight: FontWeight
-                                .bold)),
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           hint: Text("y".tr()),
@@ -467,8 +460,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                         ),
                         const SizedBox(width: 8),
                         Text("to".tr(),
-                            style: const TextStyle(fontWeight: FontWeight
-                                .bold)),
+                            style: const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           hint: Text("y".tr()),
@@ -485,29 +477,13 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                     ),
                   ),
                 ),
-
-               /* Column(
-                  children: [
-                    Container(
-                      width: 70,
-                      height: 90,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.person,
-                          size: 50, color: Colors.black54),
-                    ),
-                    const SizedBox(height: 4),
-                    Text("yourPhoto".tr(),
-                        style: const TextStyle(fontSize: 10),
-                        textAlign: TextAlign.center),
-                  ],
-                ),*/
               ],
             ),
             const SizedBox(height: 16),
             Text("studentEnrollment".tr(),
-                style:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth < 360 ? 16 : 18)),
             const SizedBox(height: 16),
+
             _buildHorizontalDropdown(
               "cYear".tr(),
               selectedCourseYear,
@@ -517,18 +493,21 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
               },
               icon: Icons.school,
               isRequired: true,
-              isEditableField: true, // Add this to make it editable
+              isEditableField: true,
+              labelWidth: labelWidth,
             ),
+
             _buildHorizontalTextField("rollNo".tr(), rollNoController,
-                icon: Icons.badge),
+                icon: Icons.badge, labelWidth: labelWidth),
             _buildHorizontalTextField(
-              "registrationNo".tr(), // Localized label
+              "registrationNo".tr(),
               registrationNoController,
               icon: Icons.confirmation_num,
+              labelWidth: labelWidth,
             ),
             _buildHorizontalTextField(
                 "yearOfUni".tr(), yearOfUniversityController,
-                icon: Icons.school),
+                icon: Icons.school, labelWidth: labelWidth),
             const SizedBox(height: 14),
             const SizedBox(height: 35),
 
@@ -557,6 +536,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                 });
               },
               isStudentSection: true,
+              labelWidth: labelWidth,
             ),
 
             const SizedBox(height: 35),
@@ -585,6 +565,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                 });
               },
               isStudentSection: false,
+              labelWidth: labelWidth,
             ),
 
             const SizedBox(height: 35),
@@ -613,6 +594,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                 });
               },
               isStudentSection: false,
+              labelWidth: labelWidth,
             ),
 
             const SizedBox(height: 35),
@@ -621,42 +603,16 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
 
             const SizedBox(height: 20),
             Center(
-              child: ActionButton(text: "payment".tr(), onPressed: _submitForm),
+              child: _isSubmitting
+                  ? CircularProgressIndicator()
+                  : ActionButton(
+                  text: "uploadPhoto".tr(),
+                  onPressed: _submitForm
+              ),
             ),
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget buildInput(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              maxLines: 2,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFFFFFFFF),
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -668,25 +624,43 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         IconData? icon,
         bool isRequired = false,
         bool isReadOnly = false,
-        bool isEditableField = false, // Add this parameter
+        bool isEditableField = false,
+        required double labelWidth,
       }) {
     final bool isFieldReadOnly = (isReadOnly || _studentDataFound) &&
         !isEditableField;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    String? validSelectedValue;
+    if (selectedValue != null && items.contains(selectedValue)) {
+      validSelectedValue = selectedValue;
+    } else if (selectedValue != null) {
+      for (String item in items) {
+        if (item == selectedValue ||
+            item == selectedValue.tr() ||
+            selectedValue == item.tr()) {
+          validSelectedValue = item;
+          break;
+        }
+      }
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
+            width: labelWidth,
             child: RichText(
               text: TextSpan(
                 children: [
                   TextSpan(
                     text: label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
+                      fontSize: screenWidth < 360 ? 12 : 14,
                     ),
                   ),
                   if (isRequired)
@@ -701,21 +675,24 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: SizedBox(
-              height: 45,
+              height: screenWidth < 360 ? 40 : 45,
               child: InputDecorator(
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.lightBlue[100],
-                  prefixIcon: icon != null ? Icon(icon) : null,
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  prefixIcon: icon != null ? Icon(icon, size: screenWidth < 360 ? 18 : 24) : null,
+                  contentPadding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 360 ? 8 : 12,
+                      horizontal: 8
+                  ),
                   border: const OutlineInputBorder(),
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: selectedValue,
+                    value: validSelectedValue,
                     isExpanded: true,
                     onChanged: isFieldReadOnly ? null : onChanged,
                     items: items
@@ -724,9 +701,10 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                           value: y,
                           child: Text(
                             y,
-                            style: isFieldReadOnly
-                                ? TextStyle(color: _dimTextColor)
-                                : null,
+                            style: TextStyle(
+                              fontSize: screenWidth < 360 ? 12 : 14,
+                              color: isFieldReadOnly ? _dimTextColor : null,
+                            ),
                           ),
                         ))
                         .toList(),
@@ -745,25 +723,29 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         IconData? icon,
         bool isRequired = false,
         bool isReadOnly = false,
-        bool isEditableField = false, // New parameter for phone/address fields
+        bool isEditableField = false,
+        required double labelWidth,
       }) {
     final bool isFieldReadOnly = (isReadOnly ||
         (controller.text.isNotEmpty && _studentDataFound)) && !isEditableField;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
+            width: labelWidth,
             child: RichText(
               text: TextSpan(
                 children: [
                   TextSpan(
                     text: label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.black,
+                      fontSize: screenWidth < 360 ? 12 : 14,
                     ),
                   ),
                   if (isRequired)
@@ -778,19 +760,25 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
             child: SizedBox(
-              height: 45,
+              height: screenWidth < 360 ? 40 : 45,
               child: TextField(
                 controller: controller,
                 readOnly: isFieldReadOnly,
-                style: isFieldReadOnly ? TextStyle(color: _dimTextColor) : null,
+                style: TextStyle(
+                  fontSize: screenWidth < 360 ? 12 : 14,
+                  color: isFieldReadOnly ? _dimTextColor : null,
+                ),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.lightBlue[100],
-                  prefixIcon: icon != null ? Icon(icon) : null,
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                  prefixIcon: icon != null ? Icon(icon, size: screenWidth < 360 ? 18 : 24) : null,
+                  contentPadding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 360 ? 8 : 12,
+                      horizontal: 8
+                  ),
                   border: const OutlineInputBorder(),
                 ),
               ),
@@ -802,26 +790,35 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   }
 
   Widget _buildDateOfBirthField({required TextEditingController controller}) {
+    final labelWidth = _getLabelWidth(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-              width: 140,
+              width: labelWidth,
               child: Text("Date of Birth:",
-                  style: TextStyle(fontWeight: FontWeight.bold))),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth < 360 ? 12 : 14))),
+          const SizedBox(width: 8),
           Expanded(
             child: SizedBox(
-              height: 45,
+              height: screenWidth < 360 ? 40 : 45,
               child: TextField(
                 controller: controller,
                 readOnly: true,
-                style: TextStyle(color: _dimTextColor),
+                style: TextStyle(fontSize: screenWidth < 360 ? 12 : 14, color: _dimTextColor),
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: Colors.lightBlue[100],
-                  prefixIcon: const Icon(Icons.calendar_today),
+                  prefixIcon: Icon(Icons.calendar_today, size: screenWidth < 360 ? 18 : 24),
                   border: const OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 360 ? 8 : 12,
+                      horizontal: 8
+                  ),
                 ),
               ),
             ),
@@ -832,70 +829,82 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
   }
 
   Widget _buildGenderSelector() {
+    final labelWidth = _getLabelWidth(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 140,
+            width: labelWidth,
             child: Text(
               "gender".tr(),
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: screenWidth < 360 ? 12 : 14),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
-            child: Row(
+            child: Wrap(
+              spacing: 10,
+              runSpacing: 5,
               children: [
-                Flexible(
-                  child: Row(
-                    children: [
-                      Radio<String>(
-                        value: 'Male',
-                        groupValue: selectedGender,
-                        onChanged: _studentDataFound
-                            ? null
-                            : (value) {
-                          setState(() {
-                            selectedGender = value!;
-                          });
-                        },
-                      ),
-                      Flexible(
-                        child: Text(
-                          "male".tr(),
-                          overflow: TextOverflow.ellipsis,
-                          style: _studentDataFound ? TextStyle(
-                              color: _dimTextColor) : null,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Radio<String>(
+                      value: 'Male',
+                      groupValue: selectedGender,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: _studentDataFound
+                          ? null
+                          : (value) {
+                        setState(() {
+                          selectedGender = value!;
+                        });
+                      },
+                    ),
+                    Flexible(
+                      child: Text(
+                        "male".tr(),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: screenWidth < 360 ? 12 : 14,
+                          color: _studentDataFound ? _dimTextColor : null,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Row(
-                    children: [
-                      Radio<String>(
-                        value: 'Female',
-                        groupValue: selectedGender,
-                        onChanged: _studentDataFound
-                            ? null
-                            : (value) {
-                          setState(() {
-                            selectedGender = value!;
-                          });
-                        },
-                      ),
-                      Flexible(
-                        child: Text(
-                          "female".tr(),
-                          overflow: TextOverflow.ellipsis,
-                          style: _studentDataFound ? TextStyle(
-                              color: _dimTextColor) : null,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Radio<String>(
+                      value: 'Female',
+                      groupValue: selectedGender,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      onChanged: _studentDataFound
+                          ? null
+                          : (value) {
+                        setState(() {
+                          selectedGender = value!;
+                        });
+                      },
+                    ),
+                    Flexible(
+                      child: Text(
+                        "female".tr(),
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: screenWidth < 360 ? 12 : 14,
+                          color: _studentDataFound ? _dimTextColor : null,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -921,6 +930,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     required String? selectedNRCTypeCode,
     required Function(bool, NRCType, String?, String?, String?) onUpdate,
     bool isStudentSection = false,
+    required double labelWidth,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -935,19 +945,17 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
         ),
         const SizedBox(height: 16),
         _buildHorizontalTextField("mName".tr(), nameMyanmarController,
-            icon: Icons.person),
+            icon: Icons.person, labelWidth: labelWidth),
         _buildHorizontalTextField("eName".tr(), nameEnglishController,
-            icon: Icons.person_outline),
+            icon: Icons.person_outline, labelWidth: labelWidth),
         _buildHorizontalTextField("religion".tr(), religionController,
-            icon: Icons.favorite),
-        // Phone and Address fields are now editable - not dimmed
+            icon: Icons.favorite, labelWidth: labelWidth),
         _buildHorizontalTextField("phoneNo".tr(), phoneController,
-            icon: Icons.phone, isRequired: true, isEditableField: true),
+            icon: Icons.phone, isRequired: true, isEditableField: true, labelWidth: labelWidth),
         _buildDateOfBirthField(controller: dobController),
         _buildHorizontalTextField("address".tr(), addressController,
-            icon: Icons.home, isRequired: true, isEditableField: true),
+            icon: Icons.home, isRequired: true, isEditableField: true, labelWidth: labelWidth),
 
-        // Add gender selector only for student section
         if (isStudentSection) _buildGenderSelector(),
 
         const SizedBox(height: 20),
@@ -960,6 +968,7 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           nrcController: nrcController,
           onUpdate: onUpdate,
           isStudentSection: isStudentSection,
+          labelWidth: labelWidth,
         ),
       ],
     );
@@ -974,11 +983,13 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     required TextEditingController nrcController,
     required Function(bool, NRCType, String?, String?, String?) onUpdate,
     required bool isStudentSection,
+    required double labelWidth,
   }) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // For students, keep the progress option logic
         if (isStudentSection)
           Column(
             children: [
@@ -986,87 +997,90 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                 Column(
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// STATE DIVISION
                         Expanded(
-                          flex: 1,
-                          child: DropdownButtonFormField<String>(
-                            decoration: dropdownDecoration(),
-                            value: stateDivisionCodes.containsKey(
-                                selectedStateDivisionCode)
-                                ? selectedStateDivisionCode
-                                : null,
-                            items: stateDivisionCodes.entries
-                                .map(
-                                  (e) => DropdownMenuItem(
-                                value: e.key,
-                                child: Text(e.value),
-                              ),
-                            )
-                                .toList(),
-                            onChanged: _studentDataFound
-                                ? null
-                                : (val) {
-                              onUpdate(
-                                inProcess,
-                                selectedNRCType,
-                                val,
-                                null,
-                                selectedNRCTypeCode,
-                              );
-                            },
+                          flex: screenWidth < 360 ? 1 : 1,
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            child: DropdownButtonFormField<String>(
+                              decoration: dropdownDecoration(),
+                              value: selectedStateDivisionCode,
+                              isExpanded: true,
+                              items: stateDivisionCodes
+                                  .map(
+                                    (state) => DropdownMenuItem(
+                                  value: state,
+                                  child: Text(
+                                    state,
+                                    style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                                  ),
+                                ),
+                              )
+                                  .toList(),
+                              onChanged: _studentDataFound
+                                  ? null
+                                  : (val) {
+                                onUpdate(
+                                  inProcess,
+                                  selectedNRCType,
+                                  val,
+                                  null,
+                                  selectedNRCTypeCode,
+                                );
+                              },
+                            ),
                           ),
                         ),
-
-                        const SizedBox(width: 6),
-
-                        /// TOWNSHIP
+                        const SizedBox(width: 4),
                         Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            decoration: dropdownDecoration(),
-                            value: (townshipCodes[selectedStateDivisionCode] ?? [])
-                                .contains(selectedTownshipCode)
-                                ? selectedTownshipCode
-                                : null,
-                            items: (townshipCodes[selectedStateDivisionCode] ?? [])
-                                .map(
-                                  (t) => DropdownMenuItem(
-                                value: t,
-                                child: Text(t),
-                              ),
-                            )
-                                .toList(),
-                            onChanged: _studentDataFound
-                                ? null
-                                : (val) {
-                              onUpdate(
-                                inProcess,
-                                selectedNRCType,
-                                selectedStateDivisionCode,
-                                val,
-                                selectedNRCTypeCode,
-                              );
-                            },
+                          flex: screenWidth < 360 ? 2 : 2,
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 4),
+                            child: DropdownButtonFormField<String>(
+                              decoration: dropdownDecoration(),
+                              value: selectedTownshipCode,
+                              isExpanded: true,
+                              items: (townshipCodes[selectedStateDivisionCode] ?? [])
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                  value: t,
+                                  child: Text(
+                                    t,
+                                    style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                                  ),
+                                ),
+                              )
+                                  .toList(),
+                              onChanged: _studentDataFound
+                                  ? null
+                                  : (val) {
+                                onUpdate(
+                                  inProcess,
+                                  selectedNRCType,
+                                  selectedStateDivisionCode,
+                                  val,
+                                  selectedNRCTypeCode,
+                                );
+                              },
+                            ),
                           ),
                         ),
-
-                        const SizedBox(width: 6),
-
-                        /// NRC TYPE
+                        const SizedBox(width: 4),
                         Expanded(
-                          flex: 2,
+                          flex: screenWidth < 360 ? 1 : 1,
                           child: DropdownButtonFormField<String>(
                             decoration: dropdownDecoration(),
-                            value: nrcTypeCodes.any(
-                                    (t) => t['code'] == selectedNRCTypeCode)
-                                ? selectedNRCTypeCode
-                                : null,
+                            value: selectedNRCTypeCode,
+                            isExpanded: true,
                             items: nrcTypeCodes
                                 .map(
                                   (t) => DropdownMenuItem(
                                 value: t['code'],
-                                child: Text("${t['code']} - ${t['myanmar']}"),
+                                child: Text(
+                                  t['code'] ?? '',
+                                  style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                                ),
                               ),
                             )
                                 .toList(),
@@ -1088,15 +1102,22 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
 
                     const SizedBox(height: 10),
 
-                    /// NRC NUMBER
                     TextField(
                       controller: nrcController,
                       readOnly: _studentDataFound,
+                      style: TextStyle(
+                        fontSize: screenWidth < 360 ? 12 : 14,
+                        color: _studentDataFound ? _dimTextColor : null,
+                      ),
                       decoration: InputDecoration(
                         hintText: "nrcNumber".tr(),
                         filled: true,
                         fillColor: Colors.lightBlue[100],
                         border: const OutlineInputBorder(),
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: screenWidth < 360 ? 8 : 12,
+                            horizontal: 8
+                        ),
                       ),
                     ),
                   ],
@@ -1104,92 +1125,94 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
             ],
           ),
 
-        // For parents (father and mother), show simplified NRC without progress option
         if (!isStudentSection)
           Column(
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// STATE DIVISION
                   Expanded(
-                    flex: 1,
-                    child: DropdownButtonFormField<String>(
-                      decoration: dropdownDecoration(),
-                      value: stateDivisionCodes.containsKey(
-                          selectedStateDivisionCode)
-                          ? selectedStateDivisionCode
-                          : null,
-                      items: stateDivisionCodes.entries
-                          .map(
-                            (e) => DropdownMenuItem(
-                          value: e.key,
-                          child: Text(e.value),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: _studentDataFound
-                          ? null
-                          : (val) {
-                        onUpdate(
-                          inProcess,
-                          selectedNRCType,
-                          val,
-                          null,
-                          selectedNRCTypeCode,
-                        );
-                      },
+                    flex: screenWidth < 360 ? 1 : 1,
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      child: DropdownButtonFormField<String>(
+                        decoration: dropdownDecoration(),
+                        value: selectedStateDivisionCode,
+                        isExpanded: true,
+                        items: stateDivisionCodes
+                            .map(
+                              (state) => DropdownMenuItem(
+                            value: state,
+                            child: Text(
+                              state,
+                              style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                            ),
+                          ),
+                        )
+                            .toList(),
+                        onChanged: _studentDataFound
+                            ? null
+                            : (val) {
+                          onUpdate(
+                            inProcess,
+                            selectedNRCType,
+                            val,
+                            null,
+                            selectedNRCTypeCode,
+                          );
+                        },
+                      ),
                     ),
                   ),
-
-                  const SizedBox(width: 6),
-
-                  /// TOWNSHIP
+                  const SizedBox(width: 4),
                   Expanded(
-                    flex: 2,
-                    child: DropdownButtonFormField<String>(
-                      decoration: dropdownDecoration(),
-                      value: (townshipCodes[selectedStateDivisionCode] ?? [])
-                          .contains(selectedTownshipCode)
-                          ? selectedTownshipCode
-                          : null,
-                      items: (townshipCodes[selectedStateDivisionCode] ?? [])
-                          .map(
-                            (t) => DropdownMenuItem(
-                          value: t,
-                          child: Text(t),
-                        ),
-                      )
-                          .toList(),
-                      onChanged: _studentDataFound
-                          ? null
-                          : (val) {
-                        onUpdate(
-                          inProcess,
-                          selectedNRCType,
-                          selectedStateDivisionCode,
-                          val,
-                          selectedNRCTypeCode,
-                        );
-                      },
+                    flex: screenWidth < 360 ? 2 : 2,
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 4),
+                      child: DropdownButtonFormField<String>(
+                        decoration: dropdownDecoration(),
+                        value: selectedTownshipCode,
+                        isExpanded: true,
+                        items: (townshipCodes[selectedStateDivisionCode] ?? [])
+                            .map(
+                              (t) => DropdownMenuItem(
+                            value: t,
+                            child: Text(
+                              t,
+                              style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                            ),
+                          ),
+                        )
+                            .toList(),
+                        onChanged: _studentDataFound
+                            ? null
+                            : (val) {
+                          onUpdate(
+                            inProcess,
+                            selectedNRCType,
+                            selectedStateDivisionCode,
+                            val,
+                            selectedNRCTypeCode,
+                          );
+                        },
+                      ),
                     ),
                   ),
-
-                  const SizedBox(width: 6),
-
-                  /// NRC TYPE
+                  const SizedBox(width: 4),
                   Expanded(
-                    flex: 2,
+                    flex: screenWidth < 360 ? 1 : 1,
                     child: DropdownButtonFormField<String>(
                       decoration: dropdownDecoration(),
-                      value: nrcTypeCodes.any(
-                              (t) => t['code'] == selectedNRCTypeCode)
-                          ? selectedNRCTypeCode
-                          : null,
+                      value: selectedNRCTypeCode,
+                      isExpanded: true,
                       items: nrcTypeCodes
                           .map(
                             (t) => DropdownMenuItem(
                           value: t['code'],
-                          child: Text("${t['code']} - ${t['myanmar']}"),
+                          child: Text(
+                            t['code'] ?? '',
+                            style: TextStyle(fontSize: screenWidth < 360 ? 11 : 14),
+                          ),
                         ),
                       )
                           .toList(),
@@ -1211,15 +1234,22 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
 
               const SizedBox(height: 10),
 
-              /// NRC NUMBER
               TextField(
                 controller: nrcController,
                 readOnly: _studentDataFound,
+                style: TextStyle(
+                  fontSize: screenWidth < 360 ? 12 : 14,
+                  color: _studentDataFound ? _dimTextColor : null,
+                ),
                 decoration: InputDecoration(
                   hintText: "nrcNumber".tr(),
                   filled: true,
                   fillColor: Colors.lightBlue[100],
                   border: const OutlineInputBorder(),
+                  contentPadding: EdgeInsets.symmetric(
+                      vertical: screenWidth < 360 ? 8 : 12,
+                      horizontal: 8
+                  ),
                 ),
               ),
             ],
@@ -1228,16 +1258,58 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     );
   }
 
+  String _getRawValue(dynamic value) {
+    if (value == null) return '';
+    return value.toString();
+  }
 
-  // Add these to your state class
   List<TextEditingController> _yearControllers = [];
   List<TextEditingController> _gradeControllers = [];
 
+  String _getStringValue(dynamic value) {
+    if (value == null) return '';
+    if (value is Timestamp) {
+      try {
+        return value.toDate().toString();
+      } catch (e) {
+        return value.toString();
+      }
+    }
+    return value.toString();
+  }
+
+  String? _getNullableString(dynamic value) {
+    if (value == null) return null;
+    return value.toString();
+  }
+
+  Map<String, dynamic>? _getMapValue(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) {
+      try {
+        return Map<String, dynamic>.from(value);
+      } catch (e) {
+        print('Error converting map: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
   Widget _buildExamInformationSection() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final columnWidth = screenWidth < 500 ? 100.0 : 150.0;
+    const fixedColumns = {
+      0: FixedColumnWidth(150.0),
+      1: FixedColumnWidth(180.0),
+      2: FixedColumnWidth(120.0),
+      3: FixedColumnWidth(120.0),
+    };
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Exam Result Information Header
         Container(
           width: double.infinity,
           color: Colors.indigo,
@@ -1245,12 +1317,13 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           child: Text(
             "examResultInformation".tr(),
             style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold),
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 16),
 
-        // Centered StreamBuilder with horizontal scroll
         Center(
           child: StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
@@ -1268,131 +1341,179 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
                   child: Text(
                     "noExamDataFound".tr(),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: Colors.grey[600], fontSize: screenWidth < 360 ? 12 : 14),
                   ),
                 );
               }
 
-              final data = snapshot.data!.data() as Map<String, dynamic>;
-
-              // Filter out non-year fields and create a list of years
-              final years = data.entries.where((entry) =>
-              entry.key != 'uid' &&
-                  entry.key != 'studentId' &&
-                  entry.key != 'createdAt' &&
-                  entry.key != 'updatedAt'
-              ).toList();
-
-              if (years.isEmpty) {
+              final data = snapshot.data!.data();
+              if (data == null) {
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     "noExamDataFound".tr(),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.grey[600]),
+                    style: TextStyle(color: Colors.grey[600], fontSize: screenWidth < 360 ? 12 : 14),
                   ),
                 );
               }
 
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child: Table(
-                    border: TableBorder.all(color: Colors.grey, width: 1.0),
-                    defaultColumnWidth: const FixedColumnWidth(180.0),
-                    columnWidths: const {
-                      0: FixedColumnWidth(150.0), // Year column
-                      1: FixedColumnWidth(180.0), // Semester column
-                      2: FixedColumnWidth(120.0), // CGPA column
-                      3: FixedColumnWidth(120.0), // SGPA column
-                    },
-                    children: [
-                      // Table header row
-                      TableRow(
-                        decoration: BoxDecoration(
-                          color: Colors.indigo,
-                        ),
-                        children: [
-                          "year".tr(),
-                          "semester".tr(),
-                          "CGPA".tr(),
-                          "SGPA".tr(),
-                        ].map((columnName) {
-                          return Padding(
-                            padding: const EdgeInsets.all(12.0),
-                            child: Text(
-                              columnName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        }).toList(),
-                      ),
+              try {
+                Map<String, dynamic> examData = {};
+                if (data is Map<String, dynamic>) {
+                  examData = data;
+                } else {
+                  examData = Map<String, dynamic>.from(data as Map);
+                }
 
-                      // Generate rows dynamically from Firebase data
-                      for (final yearEntry in years)
-                        for (final semesterEntry in (yearEntry.value as Map<
-                            String,
-                            dynamic>).entries)
+                final years = examData.entries.where((entry) {
+                  return entry.key != 'uid' &&
+                      entry.key != 'studentId' &&
+                      entry.key != 'createdAt' &&
+                      entry.key != 'updatedAt';
+                }).toList();
+
+                if (years.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      "noExamDataFound".tr(),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey[600], fontSize: screenWidth < 360 ? 12 : 14),
+                    ),
+                  );
+                }
+
+                List<TableRow> tableRows = [
+                  TableRow(
+                    decoration: BoxDecoration(
+                      color: Colors.indigo,
+                    ),
+                    children: [
+                      "year".tr(),
+                      "semester".tr(),
+                      "CGPA".tr(),
+                      "SGPA".tr(),
+                    ].map((columnName) {
+                      return Padding(
+                        padding: EdgeInsets.all(screenWidth < 360 ? 6.0 : 12.0),
+                        child: Text(
+                          columnName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: screenWidth < 360 ? 11 : 14,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ];
+
+                for (final yearEntry in years) {
+                  if (yearEntry.value is Map<String, dynamic>) {
+                    final yearMap = yearEntry.value as Map<String, dynamic>;
+
+                    for (final semesterEntry in yearMap.entries) {
+                      if (semesterEntry.value is Map<String, dynamic>) {
+                        final semesterData = semesterEntry.value as Map<String, dynamic>;
+
+                        tableRows.add(
                           TableRow(
                             children: [
-                              // Year Cell
                               Padding(
-                                padding: const EdgeInsets.all(12.0),
+                                padding: EdgeInsets.all(screenWidth < 360 ? 6.0 : 12.0),
                                 child: Text(
                                   _formatYearText(yearEntry.key),
-                                  style: _studentDataFound ? TextStyle(
-                                      color: _dimTextColor) : null,
+                                  style: TextStyle(
+                                    fontSize: screenWidth < 360 ? 11 : 14,
+                                    color: _studentDataFound ? _dimTextColor : null,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-
-                              // Semester Cell
                               Padding(
-                                padding: const EdgeInsets.all(12.0),
+                                padding: EdgeInsets.all(screenWidth < 360 ? 6.0 : 12.0),
                                 child: Text(
                                   _formatSemesterText(semesterEntry.key),
-                                  style: _studentDataFound ? TextStyle(
-                                      color: _dimTextColor) : null,
+                                  style: TextStyle(
+                                    fontSize: screenWidth < 360 ? 11 : 14,
+                                    color: _studentDataFound ? _dimTextColor : null,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-
-                              // CGPA Cell
                               Padding(
-                                padding: const EdgeInsets.all(12.0),
+                                padding: EdgeInsets.all(screenWidth < 360 ? 6.0 : 12.0),
                                 child: Text(
-                                  semesterEntry.value['CGPA']?.toString() ??
-                                      '—',
-                                  style: _studentDataFound ? TextStyle(
-                                      color: _dimTextColor) : null,
+                                  semesterData['CGPA']?.toString() ?? '—',
+                                  style: TextStyle(
+                                    fontSize: screenWidth < 360 ? 11 : 14,
+                                    color: _studentDataFound ? _dimTextColor : null,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-
-                              // SGPA Cell
                               Padding(
-                                padding: const EdgeInsets.all(12.0),
+                                padding: EdgeInsets.all(screenWidth < 360 ? 6.0 : 12.0),
                                 child: Text(
-                                  semesterEntry.value['SGPA']?.toString() ??
-                                      '—',
-                                  style: _studentDataFound ? TextStyle(
-                                      color: _dimTextColor) : null,
+                                  semesterData['SGPA']?.toString() ?? '—',
+                                  style: TextStyle(
+                                    fontSize: screenWidth < 360 ? 11 : 14,
+                                    color: _studentDataFound ? _dimTextColor : null,
+                                  ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
                           ),
+                        );
+                      }
+                    }
+                  }
+                }
+
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                    ),
+                    child: Table(
+                      border: TableBorder.all(color: Colors.grey, width: 1.0),
+                      defaultColumnWidth: FixedColumnWidth(columnWidth),
+                      columnWidths: {
+                        0: FixedColumnWidth(screenWidth < 360 ? 120.0 : 150.0),
+                        1: FixedColumnWidth(screenWidth < 360 ? 140.0 : 180.0),
+                        2: FixedColumnWidth(screenWidth < 360 ? 90.0 : 120.0),
+                        3: FixedColumnWidth(screenWidth < 360 ? 90.0 : 120.0),
+                      },
+                      children: tableRows,
+                    ),
+                  ),
+                );
+              } catch (e, stackTrace) {
+                print('Error building exam table: $e');
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Text(
+                        "Error loading exam data".tr(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.red[600], fontSize: screenWidth < 360 ? 12 : 14),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "Error: ${e.toString()}",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600], fontSize: screenWidth < 360 ? 10 : 12),
+                      ),
                     ],
                   ),
-                ),
-              );
+                );
+              }
             },
           ),
         ),
@@ -1401,7 +1522,6 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     );
   }
 
-// Helper methods to format year and semester text
   String _formatYearText(String yearKey) {
     switch (yearKey) {
       case 'firstYear':
@@ -1434,345 +1554,353 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
     }
   }
 
-
-  // ... rest of your methods (updateStudentData, submitForm, etc.) remain the same
-  Future<void> _updateStudentData() async {
-    try {
-      // Get the roll number from the controller
-      final String rollNo = rollNoController.text.trim();
-
-      print('Attempting to update student with roll number: $rollNo');
-
-      if (rollNo.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Roll number is required')),
-        );
-        return;
-      }
-
-      // Use roll number as document ID
-      final studentDoc = FirebaseFirestore.instance.collection('students').doc(
-          rollNo);
-
-      // Check if document exists first
-      final docSnapshot = await studentDoc.get();
-      if (!docSnapshot.exists) {
-        print('Document does not exist for roll number: $rollNo');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Student record not found')),
-        );
-        return;
-      }
-
-      final Map<String, dynamic> updateData = {};
-
-      // Debug: Print current values
-      print('Current address: ${addressController.text}');
-      print('Current contact: ${phoneController.text}');
-      print('From Year: $fromYear');
-      print('To Year: $toYear');
-      print('Current course year: $selectedCourseYear');
-      print('Father address: ${fatherAddressController.text}');
-      print('Father contact: ${fatherPhoneController.text}');
-      print('Mother address: ${motherAddressController.text}');
-      print('Mother contact: ${motherPhoneController.text}');
-
-      // Update student address and contact only if new input is provided
-      if (addressController.text.isNotEmpty) {
-        updateData['saddress'] = addressController.text;
-      }
-      if (phoneController.text.isNotEmpty) {
-        updateData['scontactNumber'] = phoneController.text;
-      }
-
-      // Update academic info
-      if (fromYear != null && toYear != null) {
-        updateData['academicInfo.academicYear'] = "$fromYear-$toYear";
-        updateData['academicInfo.start_year'] = int.parse(fromYear!);
-        updateData['academicInfo.end_year'] = int.parse(toYear!);
-      } else if (fromYear != null) {
-        // If only fromYear is selected, keep the existing toYear part
-        final existingData = docSnapshot.data();
-        final existingAcademicYear = existingData?['academicInfo']?['academicYear'] as String?;
-        if (existingAcademicYear != null &&
-            existingAcademicYear.contains('-')) {
-          final existingToYear = existingAcademicYear.split('-')[1];
-          updateData['academicInfo.academicYear'] = "$fromYear-$existingToYear";
-        } else {
-          updateData['academicInfo.academicYear'] = "$fromYear-";
-        }
-        updateData['academicInfo.start_year'] = int.parse(fromYear!);
-      } else if (toYear != null) {
-        // If only toYear is selected, keep the existing fromYear part
-        final existingData = docSnapshot.data();
-        final existingAcademicYear = existingData?['academicInfo']?['academicYear'] as String?;
-        if (existingAcademicYear != null &&
-            existingAcademicYear.contains('-')) {
-          final existingFromYear = existingAcademicYear.split('-')[0];
-          updateData['academicInfo.academicYear'] = "$existingFromYear-$toYear";
-        } else {
-          updateData['academicInfo.academicYear'] = "-$toYear";
-        }
-        updateData['academicInfo.end_year'] = int.parse(toYear!);
-      }
-
-      // Update course year if selected
-      if (selectedCourseYear != null && selectedCourseYear!.isNotEmpty) {
-        updateData['academicInfo.courseYear'] = selectedCourseYear;
-      }
-
-      // Update parent data using dot notation
-      if (fatherAddressController.text.isNotEmpty) {
-        updateData['parents.father.faddress'] = fatherAddressController.text;
-      }
-      if (fatherPhoneController.text.isNotEmpty) {
-        updateData['parents.father.fphone'] = fatherPhoneController.text;
-      }
-
-      if (motherAddressController.text.isNotEmpty) {
-        updateData['parents.mother.maddress'] = motherAddressController.text;
-      }
-      if (motherPhoneController.text.isNotEmpty) {
-        updateData['parents.mother.mphone'] = motherPhoneController.text;
-      }
-
-      // FIXED: Determine student type based on academic year comparison
-      final existingData = docSnapshot.data();
-      final existingStartYear = existingData?['academicInfo']?['start_year'] as int?;
-
-      // Get current admin academic year
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('admin_academic_year')
-          .doc('admin')
-          .get();
-
-      if (adminDoc.exists) {
-        final adminStartYear = adminDoc.get('astart_year') as int;
-
-        // Compare student's original start year with admin's current start year
-        if (existingStartYear != null && existingStartYear < adminStartYear) {
-          updateData['stype'] = 'old';
-          print(
-              'Setting stype to "old": Student start year ($existingStartYear) < Admin start year ($adminStartYear)');
-        } else {
-          updateData['stype'] = 'new';
-          print(
-              'Setting stype to "new": Student start year ($existingStartYear) >= Admin start year ($adminStartYear)');
-        }
-      }
-
-      // Debug: Print what we're about to update
-      print('Update data: $updateData');
-
-      // Update Firebase only if there are changes
-      if (updateData.isNotEmpty) {
-        print('Updating Firestore document...');
-        await studentDoc.update(updateData);
-        print('Update successful!');
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Data updated successfully!')),
-        );
-
-        // Navigate to payment screen after successful update
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                OldStudentPaymentQR(
-                  rollNo: rollNoController.text.trim(),
-                  studentName: nameEnglishController.text.trim(),
-                ),
-          ),
-        );
-      } else {
-        print('No data to update');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No changes to update.')),
-        );
-      }
-    } catch (e) {
-      print('Error updating data: $e');
+  Future<void> _submitForm() async {
+    if (selectedCourseYear == null || selectedCourseYear!.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating data: $e')),
-      );
-    }
-  }
-
-  void _submitForm() {
-    // Implement form submission logic here
-    // Get the roll number and name from controllers
-    final String rollNo = rollNoController.text.trim();
-    final String studentName = nameEnglishController.text.trim();
-
-    // Validate that we have the required data
-    if (rollNo.isEmpty || studentName.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill in all required fields".tr())),
+        SnackBar(content: Text("Please select course year".tr())),
       );
       return;
     }
 
-    _updateStudentData();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Updating data...".tr())),
-    );
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EnrollmentFlowScreen(
-          studentData: {
-            // Always use these exact keys
-            'rollNo': rollNoController.text.trim(),
-            'studentName': nameEnglishController.text.trim(),
-          },
+    if (rollNoController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please enter roll number".tr())),
+      );
+      return;
+    }
+
+    final String rollNo = rollNoController.text.trim();
+    final String studentName = nameEnglishController.text.trim();
+    final String courseYear = selectedCourseYear!;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      await _saveStudentDataToFirebase(rollNo);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => OldStudentPhotoUpload(
+            rollNo: rollNo,
+            studentName: studentName,
+            courseYear: courseYear,
+            studentData: {
+              'rollNo': rollNo,
+              'srollno': rollNo,
+              'studentName': studentName,
+              'sname': studentName,
+              'courseYear': courseYear,
+              ...?widget.studentData,
+            },
+            studentId: widget.studentId ?? '',
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      print('Error saving student data: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving data: $e".tr())),
+      );
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
   }
 
-  // Firebase instances
+  Future<void> _saveStudentDataToFirebase(String rollNo) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final now = Timestamp.now();
+
+      String academicYearStr = '${_adminStartYear ?? 2024}-${_adminEndYear ?? 2025}';
+
+      if (academicYearController.text.isNotEmpty) {
+        academicYearStr = academicYearController.text.trim();
+      }
+
+      int? parsedStartYear;
+      int? parsedEndYear;
+
+      final parts = academicYearStr.split('-');
+      if (parts.length == 2) {
+        parsedStartYear = int.tryParse(parts[0].trim());
+        parsedEndYear = int.tryParse(parts[1].trim());
+      }
+
+      if (parsedStartYear != null && parsedEndYear != null) {
+        await firestore.collection('admin_academic_year').doc('admin').set({
+          'academicYear': academicYearStr,
+          'astart_year': parsedStartYear,
+          'aend_year': parsedEndYear,
+          'updatedAt': now,
+        }, SetOptions(merge: true));
+
+        print('✅ Updated admin academic year: $academicYearStr');
+      }
+
+      Map<String, dynamic> studentData = {
+        'srollno': rollNo,
+        'sname_myanmar': nameMyanmarController.text.trim(),
+        'sname': nameEnglishController.text.trim(),
+        'sreligion': religionController.text.trim(),
+        'scontactNumber': phoneController.text.trim(),
+        'sdob': dobController.text.trim(),
+        'sgender': selectedGender,
+        'saddress': addressController.text.trim(),
+        'snrc': nrcNumberController.text.trim(),
+        'snrc_state_division': studentSelectedStateDivisionCode,
+        'snrc_township': studentSelectedTownshipCode,
+        'snrc_type': studentSelectedNRCTypeCode,
+        'snrc_in_process': studentInProcess,
+        'academicInfo': {
+          'registrationNumber': registrationNoController.text.trim(),
+          'yearOfUniversity': yearOfUniversityController.text.trim(),
+          'courseYear': selectedCourseYear,
+          'academicYear': '${_adminStartYear ?? 2024}-${_adminEndYear ?? 2025}',
+          'start_year': parsedStartYear ?? _adminStartYear,
+          'end_year': parsedEndYear ?? _adminEndYear,
+          'enrollStatus': 'incomplete',
+          'updatedAt': now,
+        },
+        'parents': {
+          'father': {
+            'fname_mm': fatherNameMyanmarController.text.trim(),
+            'fname_eng': fatherNameEnglishController.text.trim(),
+            'freligion': fatherReligionController.text.trim(),
+            'fphone': fatherPhoneController.text.trim(),
+            'fdob': fatherDobController.text.trim(),
+            'fnrc': fatherNRCController.text.trim(),
+            'faddress': fatherAddressController.text.trim(),
+            'fnrc_state_division': fatherSelectedStateDivisionCode,
+            'fnrc_township': fatherSelectedTownshipCode,
+            'fnrc_type': fatherSelectedNRCTypeCode,
+            'fnrc_in_process': fatherInProcess,
+          },
+          'mother': {
+            'mname_mm': motherNameMyanmarController.text.trim(),
+            'mname_eng': motherNameEnglishController.text.trim(),
+            'mreligion': motherReligionController.text.trim(),
+            'mphone': motherPhoneController.text.trim(),
+            'mdob': motherDobController.text.trim(),
+            'mnrc': motherNRCController.text.trim(),
+            'maddress': motherAddressController.text.trim(),
+            'mnrc_state_division': motherSelectedStateDivisionCode,
+            'mnrc_township': motherSelectedTownshipCode,
+            'mnrc_type': motherSelectedNRCTypeCode,
+            'mnrc_in_process': motherInProcess,
+          },
+        },
+        'stype': 'old',
+        'updatedAt': now,
+        'lastUpdated': now,
+      };
+
+      if (!_studentDataFound) {
+        studentData['createdAt'] = now;
+        studentData['uid'] = FirebaseAuth.instance.currentUser?.uid ?? '';
+      }
+
+      await firestore.collection('students').doc(rollNo).set(studentData, SetOptions(merge: true));
+      print('✅ Student data saved to Firebase: $rollNo');
+
+      await firestore.collection('student_academic_years').doc(rollNo).set({
+        'academicYear': '${_adminStartYear ?? 2024}-${_adminEndYear ?? 2025}',
+        'start_year': _adminStartYear ?? 2024,
+        'end_year': _adminEndYear ?? 2025,
+        'studentId': rollNo,
+        'studentName': nameEnglishController.text.trim(),
+        'courseYear': selectedCourseYear,
+        'updatedAt': now,
+      }, SetOptions(merge: true));
+
+      print('✅ Academic year info saved');
+    } catch (e) {
+      print('❌ Error saving to Firebase: $e');
+      rethrow;
+    }
+  }
+
+  bool _isSubmitting = false;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  // Loading state
   bool _isLoading = true;
   bool _studentDataFound = false;
-
   int? _studentYear;
   int? _adminYear;
-  String? _studentUid; // Add this to store the student UID
+  String? _studentUid;
 
-  void _populateFormData() {
+  void _populateFormData() async {
     if (widget.studentData != null) {
       final data = widget.studentData!;
-      _studentUid = data['uid'];
+      await _fetchAdminAcademicYear();
 
       setState(() {
         _studentDataFound = true;
-        // Auto-fill student data (read-only fields)
-        nameMyanmarController.text = data['sname_myanmar'] ?? '';
-        nameEnglishController.text = data['sname'] ?? '';
-        religionController.text = data['sreligion'] ?? '';
-        dobController.text = data['sdob'] ?? '';
-        nrcNumberController.text = data['snrc'] ?? '';
-        selectedGender = data['sgender'] ?? 'Male';
-        rollNoController.text = data['srollno'] ?? '';
+        _studentUid = _getStringValue(data['uid']);
 
-        // Recall phone and address data but keep them editable
-        phoneController.text = data['scontactNumber'] ?? '';
-        addressController.text = data['saddress'] ?? '';
+        nameMyanmarController.text = _getStringValue(data['sname_myanmar']);
+        nameEnglishController.text = _getStringValue(data['sname']);
+        religionController.text = _getStringValue(data['sreligion']);
+        dobController.text = _getStringValue(data['sdob']);
+        nrcNumberController.text = _getStringValue(data['snrc']);
+        selectedGender = _getStringValue(data['sgender']).isEmpty
+            ? 'Male'
+            : _getStringValue(data['sgender']);
+        rollNoController.text = _getStringValue(data['srollno']);
+        phoneController.text = _getStringValue(data['scontactNumber']);
+        addressController.text = _getStringValue(data['saddress']);
 
-        // Set NRC components if available
-        if (data['snrc_state_division'] != null) {
-          studentSelectedStateDivisionCode = data['snrc_state_division'];
-        }
-        if (data['snrc_township'] != null) {
-          studentSelectedTownshipCode = data['snrc_township'];
-        }
-        if (data['snrc_type'] != null) {
-          studentSelectedNRCTypeCode = data['snrc_type'];
+        final stateDivisionFromDB = _getNullableString(
+            data['snrc_state_division'] ??
+                data['snrcStateDivision'] ??
+                data['stateDivision'] ??
+                data['state_division']);
+
+        if (stateDivisionFromDB != null) {
+          for (String stateDivision in stateDivisionCodes) {
+            if (stateDivisionFromDB == stateDivision ||
+                stateDivisionFromDB.tr() == stateDivision ||
+                stateDivision == stateDivisionFromDB.tr()) {
+              studentSelectedStateDivisionCode = stateDivision;
+              break;
+            }
+          }
         }
 
-        // Academic info
-        final academicInfo = data['academicInfo'] as Map<String, dynamic>?;
+        studentSelectedTownshipCode = _getNullableString(
+            data['snrc_township'] ??
+                data['snrcTownship'] ??
+                data['township']);
+
+        studentSelectedNRCTypeCode = _getNullableString(
+            data['snrc_type'] ??
+                data['snrcType'] ??
+                data['nrc_type']);
+
+        final academicInfo = _getMapValue(data['academicInfo']);
         if (academicInfo != null) {
           if (academicInfo['registrationNumber'] != null) {
             registrationNoController.text =
-                academicInfo['registrationNumber'].toString();
+                _getStringValue(academicInfo['registrationNumber']);
           }
           if (academicInfo['yearOfUniversity'] != null) {
             yearOfUniversityController.text =
-                academicInfo['yearOfUniversity'].toString();
+                _getStringValue(academicInfo['yearOfUniversity']);
             _studentYear =
-                int.tryParse(academicInfo['yearOfUniversity'].toString());
+                int.tryParse(_getStringValue(academicInfo['yearOfUniversity']));
+          }
+
+          if (academicInfo['courseYear'] != null) {
+            final courseYearFromDB = _getStringValue(academicInfo['courseYear']);
+
+            for (String courseYear in courseYears) {
+              if (courseYearFromDB == courseYear ||
+                  courseYearFromDB.tr() == courseYear ||
+                  courseYear == courseYearFromDB.tr()) {
+                selectedCourseYear = courseYear;
+                break;
+              }
+            }
+
+            if (selectedCourseYear == null && courseYearFromDB.isNotEmpty) {
+              selectedCourseYear = courseYearFromDB;
+            }
           }
         }
 
-        // Parents info
-        final parents = data['parents'] as Map<String, dynamic>?;
+        final parents = _getMapValue(data['parents']);
         if (parents != null) {
-          final father = parents['father'] as Map<String, dynamic>?;
-          final mother = parents['mother'] as Map<String, dynamic>?;
+          final father = _getMapValue(parents['father']);
+          final mother = _getMapValue(parents['mother']);
 
-          // Father data
           if (father != null) {
-            if (father['fname_mm'] != null) {
-              fatherNameMyanmarController.text = father['fname_mm'];
-            }
-            if (father['fname_eng'] != null) {
-              fatherNameEnglishController.text = father['fname_eng'];
-            }
-            if (father['freligion'] != null) {
-              fatherReligionController.text = father['freligion'];
-            }
-            if (father['fdob'] != null) {
-              fatherDobController.text = father['fdob'];
-            }
-            if (father['fnrc'] != null) {
-              fatherNRCController.text = father['fnrc'];
-            }
-            // Recall father phone and address but keep editable
-            fatherPhoneController.text = father['fphone'] ?? '';
-            fatherAddressController.text = father['faddress'] ?? '';
+            fatherNameMyanmarController.text = _getStringValue(father['fname_mm']);
+            fatherNameEnglishController.text = _getStringValue(father['fname_eng']);
+            fatherReligionController.text = _getStringValue(father['freligion']);
+            fatherDobController.text = _getStringValue(father['fdob']);
+            fatherNRCController.text = _getStringValue(father['fnrc']);
+            fatherPhoneController.text = _getStringValue(father['fphone']);
+            fatherAddressController.text = _getStringValue(father['faddress']);
 
-            if (father['fnrc_state_division'] != null) {
-              fatherSelectedStateDivisionCode = father['fnrc_state_division'];
+            final fatherStateDivisionFromDB = _getNullableString(
+                father['fnrc_state_division'] ??
+                    father['fnrcStateDivision'] ??
+                    father['stateDivision']);
+
+            if (fatherStateDivisionFromDB != null) {
+              for (String stateDivision in stateDivisionCodes) {
+                if (fatherStateDivisionFromDB == stateDivision ||
+                    fatherStateDivisionFromDB.tr() == stateDivision ||
+                    stateDivision == fatherStateDivisionFromDB.tr()) {
+                  fatherSelectedStateDivisionCode = stateDivision;
+                  break;
+                }
+              }
             }
-            if (father['fnrc_township'] != null) {
-              fatherSelectedTownshipCode = father['fnrc_township'];
-            }
-            if (father['fnrc_type'] != null) {
-              fatherSelectedNRCTypeCode = father['fnrc_type'];
-            }
-            if (father['fnrc_in_process'] != null) {
-              fatherInProcess = father['fnrc_in_process'];
-            }
+
+            fatherSelectedTownshipCode = _getNullableString(
+                father['fnrc_township'] ??
+                    father['fnrcTownship'] ??
+                    father['township']);
+
+            fatherSelectedNRCTypeCode = _getNullableString(
+                father['fnrc_type'] ??
+                    father['fnrcType'] ??
+                    father['nrc_type']);
+
+            fatherInProcess = father['fnrc_in_process'] == true;
           }
 
-          // Mother data
           if (mother != null) {
-            if (mother['mname_mm'] != null) {
-              motherNameMyanmarController.text = mother['mname_mm'];
-            }
-            if (mother['mname_eng'] != null) {
-              motherNameEnglishController.text = mother['mname_eng'];
-            }
-            if (mother['mreligion'] != null) {
-              motherReligionController.text = mother['mreligion'];
-            }
-            if (mother['mdob'] != null) {
-              motherDobController.text = mother['mdob'];
-            }
-            if (mother['mnrc'] != null) {
-              motherNRCController.text = mother['mnrc'];
-            }
-            // Recall mother phone and address but keep editable
-            motherPhoneController.text = mother['mphone'] ?? '';
-            motherAddressController.text = mother['maddress'] ?? '';
+            motherNameMyanmarController.text = _getStringValue(mother['mname_mm']);
+            motherNameEnglishController.text = _getStringValue(mother['mname_eng']);
+            motherReligionController.text = _getStringValue(mother['mreligion']);
+            motherDobController.text = _getStringValue(mother['mdob']);
+            motherNRCController.text = _getStringValue(mother['mnrc']);
+            motherPhoneController.text = _getStringValue(mother['mphone']);
+            motherAddressController.text = _getStringValue(mother['maddress']);
 
-            if (mother['mnrc_state_division'] != null) {
-              motherSelectedStateDivisionCode = mother['mnrc_state_division'];
+            final motherStateDivisionFromDB = _getNullableString(
+                mother['mnrc_state_division'] ??
+                    mother['mnrcStateDivision'] ??
+                    mother['stateDivision']);
+
+            if (motherStateDivisionFromDB != null) {
+              for (String stateDivision in stateDivisionCodes) {
+                if (motherStateDivisionFromDB == stateDivision ||
+                    motherStateDivisionFromDB.tr() == stateDivision ||
+                    stateDivision == motherStateDivisionFromDB.tr()) {
+                  motherSelectedStateDivisionCode = stateDivision;
+                  break;
+                }
+              }
             }
-            if (mother['mnrc_township'] != null) {
-              motherSelectedTownshipCode = mother['mnrc_township'];
-            }
-            if (mother['mnrc_type'] != null) {
-              motherSelectedNRCTypeCode = mother['mnrc_type'];
-            }
-            if (mother['mnrc_in_process'] != null) {
-              motherInProcess = mother['mnrc_in_process'];
-            }
+
+            motherSelectedTownshipCode = _getNullableString(
+                mother['mnrc_township'] ??
+                    mother['mnrcTownship'] ??
+                    mother['township']);
+
+            motherSelectedNRCTypeCode = _getNullableString(
+                mother['mnrc_type'] ??
+                    mother['mnrcType'] ??
+                    mother['nrc_type']);
+
+            motherInProcess = mother['mnrc_in_process'] == true;
           }
         }
-      });
 
-      // _fetchExamData();
-      _fetchAdminAcademicYear();
+        _isLoading = false;
+      });
+    } else {
+      await _fetchAdminAcademicYear();
       setState(() {
         _isLoading = false;
-      }
-      );
+      });
     }
   }
 
@@ -1785,6 +1913,24 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
 
       if (academicYearDoc.exists) {
         final academicYearData = academicYearDoc.data();
+        final academicYear = academicYearData?['academicYear']?.toString();
+
+        if (academicYear != null) {
+          final parts = academicYear.split('-');
+          if (parts.length == 2) {
+            final startYear = parts[0].trim();
+            final endYear = parts[1].trim();
+
+            setState(() {
+              _adminStartYear = int.tryParse(startYear);
+              _adminEndYear = int.tryParse(endYear);
+              fromYear = startYear;
+              toYear = endYear;
+            });
+            return;
+          }
+        }
+
         final startYear = academicYearData?['astart_year']?.toString();
         final endYear = academicYearData?['aend_year']?.toString();
 
@@ -1792,73 +1938,15 @@ class _OldStudentEnrollmentAppState extends State<OldStudentEnrollmentApp> {
           setState(() {
             _adminStartYear = int.tryParse(startYear);
             _adminEndYear = int.tryParse(endYear);
-            _adminYear = _adminStartYear; // Set _adminYear for comparison
             fromYear = startYear;
             toYear = endYear;
-            _isLoading = false;
           });
         }
       } else {
-        setState(() => _isLoading = false);
         print('Admin academic year document does not exist');
       }
     } catch (e) {
-      setState(() => _isLoading = false);
       print('Error fetching admin academic year data: $e');
     }
   }
-
-/*Future<void> _fetchExamData() async {
-    final rollNumber = _rollNumberController.text.trim(); // or however you identify student
-
-    if (rollNumber.isEmpty) return;
-
-    try {
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('exams')
-          .doc(rollNumber)
-          .get();
-
-      if (!docSnapshot.exists) {
-        print('❌ No exam data found for $rollNumber');
-        setState(() {
-          _examResults = [];
-        });
-        return;
-      }
-
-      final data = docSnapshot.data()!;
-      final List<Map<String, dynamic>> fetchedResults = [];
-
-      // Loop through all years and semesters dynamically
-      data.forEach((yearKey, yearValue) {
-        if (yearValue is Map) {
-          yearValue.forEach((semesterKey, semesterValue) {
-            if (semesterValue is Map) {
-              final cgpa = semesterValue['CGPA'];
-              final sgpa = semesterValue['SGPA'];
-
-              // Only add semesters that actually have data (not empty or "—")
-              if (cgpa != "—" || sgpa != "—") {
-                fetchedResults.add({
-                  'year': yearKey,
-                  'semester': semesterKey,
-                  'CGPA': cgpa,
-                  'SGPA': sgpa,
-                });
-              }
-            }
-          });
-        }
-      });
-
-      setState(() {
-        _examResults = fetchedResults;
-      });
-
-      print("✅ Loaded ${_examResults.length} exam records");
-    } catch (e) {
-      print('⚠️ Error fetching exam data: $e');
-    }
-  }*/
 }

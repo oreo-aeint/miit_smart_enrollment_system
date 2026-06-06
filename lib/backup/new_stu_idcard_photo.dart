@@ -12,11 +12,19 @@ import 'pdf_voucher_screen.dart';
 
 class NewStudentIDPhotoUpload extends StatefulWidget {
   final Map<String, dynamic> studentData;
+  final String rollNo;           // Add this
+  final String studentName;      // Add this
+  final String? courseYear;
 
   const NewStudentIDPhotoUpload({
     Key? key,
     required this.studentData,
+    required this.rollNo,        // Add this
+    required this.studentName,   // Add this
+    this.courseYear,
   }) : super(key: key);
+
+
 
   @override
   State<NewStudentIDPhotoUpload> createState() => _NewStudentIDPhotoUpload();
@@ -35,8 +43,8 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
   bool _isUploading = false;
 
   // Get student info from passed data
-  String get _rollNo => widget.studentData['rollNo'] ?? 'N/A';
-  String get _studentName => widget.studentData['studentName'] ?? 'N/A';
+  String get _rollNo => widget.rollNo;
+  String get _studentName => widget.studentName;
 
   // Image picker instance
   final ImagePicker _picker = ImagePicker();
@@ -79,81 +87,6 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
     }
   }
 //original
- /* Future<void> uploadImage(int index) async {
-    File? fileToUpload;
-    Uint8List? bytesToUpload;
-    String fileNamePrefix = '';
-
-    if (index == 0) {
-      fileToUpload = _idFrontPhoto;
-      bytesToUpload = _idFrontPhotoWeb;
-      fileNamePrefix = 'id_front';
-    } else if (index == 1) {
-      fileToUpload = _idBackPhoto;
-      bytesToUpload = _idBackPhotoWeb;
-      fileNamePrefix = 'id_back';
-    }
-
-    if (fileToUpload == null && bytesToUpload == null) {
-      _showError('No image to upload');
-      return;
-    }
-
-    setState(() => _isUploading = true);
-
-    try {
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final rollNo = _rollNo;
-      final fileName = '${rollNo}_${fileNamePrefix}_$timestamp.jpg';
-      final path = 'uploads/$fileName';
-
-      if (kIsWeb) {
-        if (bytesToUpload != null) {
-          await Supabase.instance.client.storage
-              .from('student_photos')
-              .uploadBinary(path, bytesToUpload, fileOptions: FileOptions(
-            contentType: 'image/jpeg',
-            upsert: true,
-          ));
-        }
-      } else {
-        if (fileToUpload != null) {
-          await Supabase.instance.client.storage
-              .from('student_photos')
-              .upload(path, fileToUpload, fileOptions: FileOptions(
-            contentType: 'image/jpeg',
-            upsert: true,
-          ));
-        }
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("${fileNamePrefix.replaceAll('_', ' ').toUpperCase()} uploaded successfully!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      final imageUrl = Supabase.instance.client.storage
-          .from('student_photos')
-          .getPublicUrl(path);
-
-      print('Uploaded image URL: $imageUrl');
-
-      // Store URLs in student data
-      if (index == 0) {
-        widget.studentData['idFrontUrl'] = imageUrl;
-      } else if (index == 1) {
-        widget.studentData['idBackUrl'] = imageUrl;
-      }
-
-    } catch (e) {
-      _showError('Failed to upload image: $e');
-      rethrow;
-    } finally {
-      setState(() => _isUploading = false);
-    }
-  }*/
   Future<void> uploadImage(int index) async {
     File? fileToUpload;
     Uint8List? bytesToUpload;
@@ -182,6 +115,7 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
       final fileName = '${rollNo}_${fileNamePrefix}_$timestamp.jpg';
       final path = 'uploads/$fileName';
 
+      // Upload to Supabase Storage
       if (kIsWeb) {
         if (bytesToUpload != null) {
           await Supabase.instance.client.storage
@@ -209,34 +143,42 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
         ),
       );
 
+      // Get the public URL
       final imageUrl = Supabase.instance.client.storage
           .from('student_photos')
           .getPublicUrl(path);
 
       print('Uploaded image URL: $imageUrl');
 
-      // ✅ SAVE URL TO DATABASE
-      String columnName = '';
+      // ========== SAVE TO DATABASE TABLE ==========
+      // Prepare update data based on which photo is being uploaded
+      Map<String, dynamic> updateData = {
+        'roll_no': rollNo,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
       if (index == 0) {
-        columnName = 'id_front_url';
-        widget.studentData['idFrontUrl'] = imageUrl;
+        updateData['id_front_url'] = imageUrl;
       } else if (index == 1) {
-        columnName = 'id_back_url';
-        widget.studentData['idBackUrl'] = imageUrl;
+        updateData['id_back_url'] = imageUrl;
       }
 
-      // Update the student record with the photo URL
-      final response = await Supabase.instance.client
-          .from('students')
-          .update({
-        columnName: imageUrl,  // Store the full URL
-      })
-          .eq('srollno', _rollNo);  // Match by roll number
+      try {
+        await Supabase.instance.client
+            .from('student_photos')
+            .upsert(updateData);
 
-      if (response.error != null) {
-        print('Error saving to database: ${response.error!.message}');
-      } else {
-        print('Successfully saved $columnName to database');
+        print('Successfully saved ID card URL to table for roll_no: $rollNo');
+      } catch (dbError) {
+        print('Error saving to table: $dbError');
+        _showError('Failed to save ID card URL to database');
+      }
+
+      // Store URLs in student data (for navigation)
+      if (index == 0) {
+        widget.studentData['idFrontUrl'] = imageUrl;
+      } else if (index == 1) {
+        widget.studentData['idBackUrl'] = imageUrl;
       }
 
     } catch (e) {
@@ -246,6 +188,7 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
       setState(() => _isUploading = false);
     }
   }
+
   Future<void> uploadAllImages() async {
     setState(() => _isUploading = true);
 
@@ -701,6 +644,7 @@ class _NewStudentIDPhotoUpload extends State<NewStudentIDPhotoUpload> {
               studentData: widget.studentData,
               rollNo: _rollNo,
               studentName: _studentName,
+              courseYear: widget.courseYear,
             ),
           ),
         );

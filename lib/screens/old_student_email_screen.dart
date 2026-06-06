@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'my_drawer.dart';
 import 'package:miit_project/screens/old_student_form_review.dart';
@@ -101,10 +101,23 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
   bool isLoading = false;
   bool _isFirebaseInitialized = false;
 
+  // Email validation
+  bool _hasValidEmailFormat = false;
+
   @override
   void initState() {
     super.initState();
     _initializeFirebase();
+    emailController.addListener(() {
+      setState(() {
+        _validateEmail();
+      });
+    });
+  }
+
+  void _validateEmail() {
+    final email = emailController.text.trim();
+    _hasValidEmailFormat = email.endsWith('@miit.edu.mm');
   }
 
   Future<void> _initializeFirebase() async {
@@ -127,7 +140,7 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
         return AlertDialog(
           title: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.indigo, size: 28),
+              const Icon(Icons.warning, color: Colors.red, size: 28),
               const SizedBox(width: 10),
               Text(title),
             ],
@@ -261,12 +274,11 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                // Navigate to GPA page for graduated students
+                Navigator.of(context).pop();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => GraduatedStudentGpaPage( // Replace with your actual page name
+                    builder: (context) => GraduatedStudentGpaPage(
                       fullName: fullName,
                       rollNumber: rollNumber,
                       studentId: studentId,
@@ -275,14 +287,14 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(
+              style: TextButton.styleFrom(
                 backgroundColor: Colors.amber,
               ),
               child: Text(tr("To View GPA"), style: const TextStyle(color: Colors.white)),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -293,7 +305,7 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(
+              style: TextButton.styleFrom(
                 backgroundColor: Colors.indigo,
               ),
               child: Text(tr("To Request Transcript"), style: const TextStyle(color: Colors.white)),
@@ -302,6 +314,16 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
         );
       },
     );
+  }
+
+  // Validation method for email
+  String? _validateEmailInput() {
+    final email = emailController.text.trim();
+    if (email.isEmpty) return null;
+    if (!email.endsWith('@miit.edu.mm')) {
+      return tr("mustBeMiitEmail");
+    }
+    return null;
   }
 
   Future<void> _checkAndNavigate() async {
@@ -423,6 +445,9 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final validationError = _validateEmailInput();
+    final hasError = validationError != null && emailController.text.isNotEmpty;
+
     return Scaffold(
       backgroundColor: Colors.white,
       drawer: const MyDrawer(),
@@ -501,13 +526,73 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Column(
             children: [
-              const SizedBox(height: 80),
-              InputTextBox(
-                label: tr('email'),
-                controller: emailController,
-                icon: Icons.email,
+              const SizedBox(height: 40),
+
+              // Email Input field with validation
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 45,
+                    child: TextField(
+                      controller: emailController,
+                      style: TextStyle(
+                        color: hasError ? Colors.red : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: tr('email'),
+                        labelStyle: TextStyle(
+                          color: hasError ? Colors.red : Colors.indigo,
+                        ),
+                        prefixIcon: Icon(
+                          Icons.email,
+                          color: hasError ? Colors.red : Colors.indigo,
+                        ),
+                        filled: true,
+                        fillColor: Colors.lightBlue[100],
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 12,
+                        ),
+                        border: const OutlineInputBorder(),
+                        focusedBorder: hasError
+                            ? const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red, width: 1.0),
+                        )
+                            : const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.indigo, width: 1.0),
+                        ),
+                        errorBorder: hasError
+                            ? const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red, width: 1.0),
+                        )
+                            : null,
+                        focusedErrorBorder: hasError
+                            ? const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.red, width: 1.0),
+                        )
+                            : null,
+                      ),
+                    ),
+                  ),
+                  if (hasError && emailController.text.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 12, top: 4),
+                      child: Text(
+                        validationError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(height: 30),
+
+              const SizedBox(height: 20),
+
+              // Check Button
               SizedBox(
                 width: 170,
                 child: isLoading
@@ -522,36 +607,26 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
                   onPressed: _checkAndNavigate,
                 ),
               ),
-              const SizedBox(height: 30),
+
+              const SizedBox(height: 16),
+
+              // Red bold text instruction under the Check button
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Stack(
-                  children: [
-                    Text(
-                      tr("mustRollNo"),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        foreground: Paint()
-                          ..style = PaintingStyle.stroke
-                          ..strokeWidth = 2.2
-                          ..color = Colors.white60,
-                      ),
-                    ),
-                    Text(
-                      tr("mustRollNo"),
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  "Your email address must be your_roll_number@miit.edu.mm\nEg: 2025-miit-cse-001@miit.edu.mm",
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
                 ),
               ),
+
               const Spacer(),
+
+              // Back button
               Align(
                 alignment: Alignment.bottomLeft,
                 child: Padding(

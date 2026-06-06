@@ -12,10 +12,16 @@ import 'new_stu_idcard_photo.dart';
 
 class NewStudentPhotoUpload extends StatefulWidget {
   final Map<String, dynamic> studentData;
+  final String rollNo;           // Add this
+  final String studentName;      // Add this
+  final String? courseYear;
 
   const NewStudentPhotoUpload({
     Key? key,
-    required this.studentData, required String rollNo, required String studentName,
+    required this.studentData,
+    required this.rollNo,        // Add this
+    required this.studentName,   // Add this
+    this.courseYear,
   }) : super(key: key);
 
   @override
@@ -32,8 +38,8 @@ class _NewStudentPhotoUpload extends State<NewStudentPhotoUpload> {
   bool _isUploading = false;
 
   // Get student info from passed data
-  String get _rollNo => widget.studentData['rollNo'] ?? 'N/A';
-  String get _studentName => widget.studentData['studentName'] ?? 'N/A';
+  String get _rollNo => widget.rollNo;
+  String get _studentName =>widget.studentName;
 
   // Image picker instance
   final ImagePicker _picker = ImagePicker();
@@ -94,6 +100,7 @@ class _NewStudentPhotoUpload extends State<NewStudentPhotoUpload> {
       final fileName = '${rollNo}_${fileNamePrefix}_$timestamp.jpg';
       final path = 'uploads/$fileName';
 
+      // Upload to Supabase Storage
       if (kIsWeb) {
         if (bytesToUpload != null) {
           await Supabase.instance.client.storage
@@ -121,13 +128,30 @@ class _NewStudentPhotoUpload extends State<NewStudentPhotoUpload> {
         ),
       );
 
+      // Get the public URL
       final imageUrl = Supabase.instance.client.storage
           .from('student_photos')
           .getPublicUrl(path);
 
       print('Uploaded image URL: $imageUrl');
 
-      // Store URL in student data
+      // ========== SAVE TO DATABASE TABLE ==========
+      try {
+        await Supabase.instance.client
+            .from('student_photos')
+            .upsert({
+          'roll_no': rollNo,
+          'student_photo_url': imageUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+
+        print('Successfully saved student photo URL to table for roll_no: $rollNo');
+      } catch (dbError) {
+        print('Error saving to table: $dbError');
+        _showError('Failed to save photo URL to database');
+      }
+
+      // Store URL in student data (for navigation)
       widget.studentData['photoUrl'] = imageUrl;
 
     } catch (e) {
@@ -538,6 +562,9 @@ class _NewStudentPhotoUpload extends State<NewStudentPhotoUpload> {
           context,
           MaterialPageRoute(
             builder: (context) => NewStudentIDPhotoUpload(
+              rollNo: widget.rollNo,
+              studentName: widget.studentName,
+              courseYear: widget.courseYear,
               studentData: widget.studentData,
             ),
           ),
