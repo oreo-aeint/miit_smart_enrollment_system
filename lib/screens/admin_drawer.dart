@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'student_info.dart';
 import 'profile_screen.dart';
 import 'enrollment_request_page.dart';
-//import 'student_list.dart';
+import 'excel_uploader.dart';
+import 'student_list_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,19 +58,19 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   late final PageController _pageController;
 
-  // Titles for each screen
   final List<String> _appBarTitles = [
     'studentInfo',
     'enrollmentRequestPage',
-    'studentList',
+    'uploadStudentData',
+    'StudentResultsScreen',
     'profileScreen',
   ];
 
-  // Screens list
   final List<Widget> _screens = [
     const StudentInfoScreen(),
     const EnrollmentRequestPage(),
-    //const StudentListScreen(), // Uncomment when you implement this
+    ExcelUploader(),
+    StudentResultsPage(),
     const ProfileScreen(),
   ];
 
@@ -129,6 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   Row(
                     children: [
+                      // Language Dropdown
                       Padding(
                         padding: const EdgeInsets.only(right: 16.0),
                         child: DropdownButton<Locale>(
@@ -136,9 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           icon: const Icon(Icons.language, color: Colors.indigo),
                           value: context.locale,
                           onChanged: (Locale? newLocale) {
-                            if (newLocale != null) {
-                              context.setLocale(newLocale);
-                            }
+                            if (newLocale != null) context.setLocale(newLocale);
                           },
                           items: const [
                             DropdownMenuItem(
@@ -152,13 +153,44 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.notifications,
-                          color: Colors.indigo,
-                          size: 24,
-                        ),
+
+                      // Notification Icon with StreamBuilder - Fixed to show pending enrollment requests
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('enrollment_requests')
+                            .where('status', isEqualTo: 'Pending')
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          int count = snapshot.data?.docs.length ?? 0;
+
+                          return Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications, color: Colors.indigo),
+                                onPressed: () {
+                                  _pageController.jumpToPage(1); // EnrollmentRequestPage
+                                  setState(() => _currentIndex = 1);
+                                },
+                              ),
+                              if (count > 0)
+                                Positioned(
+                                  right: 6,
+                                  top: 6,
+                                  child: CircleAvatar(
+                                    radius: 8,
+                                    backgroundColor: Colors.red,
+                                    child: Text(
+                                      count > 9 ? '9+' : count.toString(),
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -204,8 +236,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             _buildNavItem(Icons.person, 'studentInfo'.tr(), 0),
             _buildNavItem(Icons.add_circle, 'enrollmentRequestPage'.tr(), 1),
-            _buildNavItem(Icons.people, 'studentList'.tr(), 2),
-            _buildNavItem(Icons.account_circle, 'profileScreen'.tr(), 3),
+            _buildNavItem(Icons.upload_file, 'uploadStudentData'.tr(), 2),
+            _buildNavItem(Icons.people, 'studentList'.tr(), 3),
+            _buildNavItem(Icons.account_circle, 'profileScreen'.tr(), 4),
           ],
         ),
       ),

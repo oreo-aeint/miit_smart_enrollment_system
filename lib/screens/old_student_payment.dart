@@ -6,15 +6,20 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'my_drawer.dart';
 import 'package:miit_project/components/text.dart';
+import 'package:miit_project/components/button.dart';
+import 'package:miit_project/screens/pdf_voucher_screen.dart';
+import 'package:miit_project/screens/home_screen.dart';
 
 class OldStudentPaymentQR extends StatefulWidget {
   final String rollNo;
   final String studentName;
+  final String? courseYear;
 
   const OldStudentPaymentQR({
     super.key,
     required this.rollNo,
     required this.studentName,
+    this.courseYear, required Map<String, dynamic> studentData,
   });
 
   @override
@@ -32,14 +37,26 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
 
   String _date = "";
   String? _qrData;
+  bool _isSubmitting = false;
+
+  // Academic year and payment amounts from admin settings
+  String _academicYear = "2024-2025";
+  String _bePayment = "80000";
+  String _mePayment = "100000";
+  bool _isLoadingSettings = true;
+
+  // Course year logic
+  String? _selectedCourseYear;
+  bool _isBECourse = false;
+  bool _isMECourse = false;
+  bool _isAmountAutoFilled = false;
 
   @override
   void initState() {
     super.initState();
     referenceController.text = _generateReference();
     final today = DateTime.now();
-    _date =
-    "${today.year.toString().padLeft(4, '0')}-"
+    _date = "${today.year.toString().padLeft(4, '0')}-"
         "${today.month.toString().padLeft(2, '0')}-"
         "${today.day.toString().padLeft(2, '0')}";
 
@@ -47,16 +64,167 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
     dateController.text = _date;
     rollNoController.text = widget.rollNo;
     nameController.text = widget.studentName;
+
+    // Store the course year
+    _selectedCourseYear = widget.courseYear;
+    print('Payment Screen - Received course year: $_selectedCourseYear');
+
+    // Load academic settings
+    _loadAcademicSettings();
+  }
+
+  // FIXED: Updated to include "first year" for B.E detection
+  void _analyzeCourseYear() {
+    if (_selectedCourseYear == null || _selectedCourseYear!.isEmpty) {
+      print('No course year provided');
+      return;
+    }
+
+    final courseYear = _selectedCourseYear!.toLowerCase();
+    print('Analyzing course year: $courseYear');
+
+    // UPDATED: B.E Patterns - Now includes "first year"
+    final bePatterns = [
+      'first year', 'second year', 'third year', 'fourth year', 'final year',
+      'first', 'sec', 'third', 'fourth', 'final',
+      'ပထမနှစ်', 'ဒုတိယနှစ်', 'တတိယနှစ်', 'စတုတ္ထနှစ်', 'နောက်ဆုံးနှစ်', // Burmese
+      '1', '2', '3', '4', // Year numbers
+      'be', 'bachelor', 'engineering',
+      'year1', 'year2', 'year3', 'year4'
+    ];
+
+    // M.E Patterns
+    final mePatterns = [
+      'master first year', 'master second year', 'master1', 'master2',
+      'master', 'm.e', 'မဟာ', 'postgraduate', 'graduate',
+      'master first', 'master second', 'master1st', 'master2nd'
+    ];
+
+    // Reset flags
+    _isBECourse = false;
+    _isMECourse = false;
+
+    // Debug: Print what we're checking
+    print('Checking B.E patterns...');
+    for (var pattern in bePatterns) {
+      if (courseYear.contains(pattern)) {
+        print('  ✓ Matches B.E pattern: $pattern');
+        _isBECourse = true;
+        break;
+      }
+    }
+
+    if (!_isBECourse) {
+      print('Checking M.E patterns...');
+      for (var pattern in mePatterns) {
+        if (courseYear.contains(pattern)) {
+          print('  ✓ Matches M.E pattern: $pattern');
+          _isMECourse = true;
+          break;
+        }
+      }
+    }
+
+    print('Analysis Result:');
+    print('  Course: $_selectedCourseYear');
+    print('  Is B.E Course: $_isBECourse');
+    print('  Is M.E Course: $_isMECourse');
+
+    // Auto-fill amount based on course year
+    _autoFillAmount();
+  }
+
+  // Auto-fill amount based on course year
+  void _autoFillAmount() {
+    if (_isBECourse) {
+      amountController.text = _bePayment;
+      _isAmountAutoFilled = true;
+      print('✓ Auto-filled B.E amount: $_bePayment');
+    } else if (_isMECourse) {
+      amountController.text = _mePayment;
+      _isAmountAutoFilled = true;
+      print('✓ Auto-filled M.E amount: $_mePayment');
+    } else {
+      _isAmountAutoFilled = false;
+      print('✗ No auto-fill - course year not recognized');
+      // Don't clear amountController here - let user enter manually
+    }
+  }
+
+  // Load academic settings from Firestore
+  Future<void> _loadAcademicSettings() async {
+    try {
+      final docSnapshot = await FirebaseFirestore.instance
+          .collection('admin_academic_year')
+          .doc('admin')
+          .get();
+
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+
+        // Safe extraction with defaults
+        final startYear = (data['astart_year'] is num)
+            ? (data['astart_year'] as num).toString()
+            : '2024';
+        final endYear = (data['aend_year'] is num)
+            ? (data['aend_year'] as num).toString()
+            : '2025';
+
+        // Payment amounts with fallbacks
+        final beAmount = (data['set_amount'] is num)
+            ? (data['set_amount'] as num).toString()
+            : '65000';
+
+        final meAmount = (data['set_amount_master'] is num)
+            ? (data['set_amount_master'] as num).toString()
+            : '80000';
+
+        setState(() {
+          _academicYear = '$startYear - $endYear';
+          _bePayment = beAmount;
+          _mePayment = meAmount;
+        });
+
+        print('✓ Loaded payment amounts:');
+        print('  Academic Year: $_academicYear');
+        print('  B.E Payment: $_bePayment');
+        print('  M.E Payment: $_mePayment');
+
+        // Analyze course year after loading settings
+        _analyzeCourseYear();
+        setState(() {
+          _isLoadingSettings = false;
+        });
+
+      } else {
+        print('Admin settings document not found - using defaults');
+        setState(() {
+          _academicYear = '2024-2025';
+          _bePayment = '80000';
+          _mePayment = '100000';
+          _isLoadingSettings = false;
+        });
+        _analyzeCourseYear();
+      }
+    } catch (e) {
+      print('Error loading academic settings: $e');
+      // Fallback to defaults on error
+      setState(() {
+        _academicYear = '2024-2025';
+        _bePayment = '80000';
+        _mePayment = '100000';
+        _isLoadingSettings = false;
+      });
+      _analyzeCourseYear();
+    }
   }
 
   String _generateReference() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     final rnd = Random.secure();
-    final part =
-    List.generate(6, (_) => chars[rnd.nextInt(chars.length)]).join();
+    final part = List.generate(6, (_) => chars[rnd.nextInt(chars.length)]).join();
     final today = DateTime.now();
-    final ymd =
-        "${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}";
+    final ymd = "${today.year}${today.month.toString().padLeft(2, '0')}${today.day.toString().padLeft(2, '0')}";
     return "MIIT-$ymd-$part";
   }
 
@@ -89,7 +257,7 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
     }
 
     final amount = double.tryParse(amountController.text);
-    if (amount == null || amount <= 0) {
+    if (amount == null) {
       _showAlert("invalidAmount".tr());
       return;
     }
@@ -107,10 +275,22 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
       _qrData = payload;
     });
 
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("qrGenerated".tr())),
     );
+  }
+
+  // Custom validator for amount field
+  String? _validateAmount(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return "required".tr();
+    }
+
+    final amount = double.tryParse(value);
+    if (amount == null) {
+      return "invalidAmount".tr();
+    }
+    return null;
   }
 
   OutlineInputBorder get inputBorder => OutlineInputBorder(
@@ -118,16 +298,148 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
     borderSide: const BorderSide(color: Colors.black26),
   );
 
-  Widget _buildBoxField({required Widget child}) {
+  Widget _buildBoxField({required Widget child, Color? backgroundColor}) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.lightBlue.shade50,
+        color: backgroundColor ?? Colors.lightBlue.shade50,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black26),
       ),
       child: child,
+    );
+  }
+
+  // Build payment notes UI
+  Widget _buildPaymentNotes() {
+    if (_isLoadingSettings) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          Row(
+            children: [
+              const Icon(Icons.payment, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(
+                'paymentNote'.tr(),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Academic Year
+          Text(
+            "${"academicYear".tr()} : $_academicYear",
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+
+          // Show selected course year
+          if (_selectedCourseYear != null && _selectedCourseYear!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              "${"cYear".tr()} : $_selectedCourseYear",
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 8),
+          // Divider
+          const Divider(color: Colors.grey),
+          const SizedBox(height: 8),
+
+          // Payment instructions
+          Text(
+            'paymentInstruction'.tr(),
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // B.E Student payment with indicator if selected
+          Row(
+            children: [
+              Icon(
+                Icons.circle,
+                size: 8,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "${"be".tr()} : ${"ks".tr()} $_bePayment",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: _isBECourse ? FontWeight.bold : FontWeight.w500,
+                    color: _isBECourse ? Colors.green : Colors.black,
+                  ),
+                ),
+              ),
+              if (_isBECourse)
+                const Icon(Icons.check, color: Colors.blue, size: 16),
+            ],
+          ),
+          const SizedBox(height: 4),
+
+          // M.E Student payment with indicator if selected
+          Row(
+            children: [
+              Icon(
+                Icons.circle,
+                size: 8,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  "${"me".tr()} : ${"ks".tr()} $_mePayment",
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: _isMECourse ? FontWeight.bold : FontWeight.w500,
+                    color: _isMECourse ? Colors.green : Colors.black,
+                  ),
+                ),
+              ),
+              if (_isMECourse)
+                const Icon(Icons.check, color: Colors.blue, size: 16),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
     );
   }
 
@@ -167,8 +479,7 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
                 onTap: () => Scaffold.of(context).openDrawer(),
                 child: Padding(
                   padding: const EdgeInsets.only(left: 8.0),
-                  child:
-                  Image.asset('assets/img_2.png', width: 50, height: 50),
+                  child: Image.asset('assets/img_2.png', width: 50, height: 50),
                 ),
               ),
             ),
@@ -198,6 +509,9 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Payment Notes
+            _buildPaymentNotes(),
+
             Form(
               key: _formKey,
               child: Column(
@@ -245,17 +559,15 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
                       controller: amountController,
                       decoration: InputDecoration(
                         labelText: "amount".tr(),
-                        hintText: "e.g. 5".tr(),
                         border: inputBorder,
+                        suffixText: "MMK",
+
                       ),
-                      keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                      ],
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? "required".tr()
-                          : null,
+                      keyboardType: _isAmountAutoFilled
+                          ? TextInputType.none
+                          : const TextInputType.numberWithOptions(decimal: true),
+                      readOnly: _isAmountAutoFilled,
+                      validator: _validateAmount,
                     ),
                   ),
                   _buildBoxField(
@@ -292,7 +604,6 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
                 size: 200,
               ),
               const SizedBox(height: 10),
-              // Display roll number note under QR code
               Text(
                 "kPayNote1".tr(),
                 style: TextStyle(
@@ -303,12 +614,7 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 10),
-              // Display actual roll number
-
               const SizedBox(height: 20),
-              // Upload KPay Screenshot Placeholder
-              const SizedBox(height: 20),
-              // Payment Summary
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -318,87 +624,39 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("paymentHistory".tr(),
-                        style: AppTextStyles.heading),
+                    Text(
+                      "paymentHistory".tr(),
+                      style: AppTextStyles.heading,
+                    ),
                     const Divider(),
-                    Text("QR No  : ${referenceController.text}"),
-                    Text("Roll No: ${rollNoController.text}"),
-                    Text("Name   : ${nameController.text}"),
-                    Text("Amount : ${amountController.text}"),
-                    Text("Date   : $_date"),
+
+                    Text("${"reference".tr()} : ${referenceController.text}"),
+                    Text("${"rollNo".tr()} : ${rollNoController.text}"),
+                    Text("${"studentName".tr()} : ${nameController.text}"),
+
+                    Text(
+                      "${"amount".tr()} : ${amountController.text} MMK "
+                          "${_isAmountAutoFilled ? '(${ "autoFilled".tr() })' : ''}",
+                    ),
+
+                    if (_selectedCourseYear != null && _selectedCourseYear!.isNotEmpty)
+                      Text("${"cYear".tr()} : $_selectedCourseYear"),
+
+                    if (_isBECourse || _isMECourse)
+                      Text(
+                        "${"program".tr()} : "
+                            "${_isBECourse ? "be".tr() : "me".tr()}",
+                      ),
+
+                    Text("${"paymentDate".tr()} : $_date"),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _qrData!));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("paymentSaved".tr())),
-                        );
-                      },
-                      icon: const Icon(Icons.save),
-                      label: Text("savePayment".tr()),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueGrey,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _submitForm();
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 24), // optional
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "submitted".tr(),
-                                  style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 25),
-                                Text(
-                                  "adminReply".tr(),
-                                  style: const TextStyle(color: Colors.black),
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: Text("ok".tr(), style: const TextStyle(color: Colors.indigo)),
-                              ),
-                            ],
-                          ),
-                        );
-
-                      },
-                      icon: const Icon(Icons.check_circle),
-                      label: Text("submit".tr()),
-                      style: ElevatedButton.styleFrom(
-
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-
-                    ),
-                  ),
-
-                ],
+              ActionButton(
+                text: tr("submit"),
+                icon: Icons.fact_check_rounded,
+                onPressed: _submitForm,
               ),
             ],
           ],
@@ -406,9 +664,16 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
       ),
     );
   }
-  bool _isSubmitting = false;
+
   void _submitForm() async {
     if (_isSubmitting) return;
+
+    // Validate amount again before submission
+    final amountValidation = _validateAmount(amountController.text);
+    if (amountValidation != null) {
+      _showAlert(amountValidation);
+      return;
+    }
 
     setState(() {
       _isSubmitting = true;
@@ -416,62 +681,186 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
 
     try {
       final firestore = FirebaseFirestore.instance;
+      final now = DateTime.now();
 
       final String rollNo = rollNoController.text.trim();
       final String qrCode = referenceController.text.trim();
       final String payDate = dateController.text.trim();
       final String payAmount = amountController.text.trim();
+      final String studentName = nameController.text.trim();
+
+      // Format time with seconds and AM/PM
+      final hour = now.hour;
+      final minute = now.minute;
+      final second = now.second;
+      final amPm = hour < 12 ? 'AM' : 'PM';
+      final hour12 = hour > 12 ? hour - 12 : hour == 0 ? 12 : hour;
+
+      final String paymentTime = "${hour12.toString().padLeft(2, '0')}:"
+          "${minute.toString().padLeft(2, '0')}:"
+          "${second.toString().padLeft(2, '0')} $amPm";
 
       // First, get the student's academic year from their document
       final studentDoc = await firestore.collection('students').doc(rollNo).get();
 
-      if (!studentDoc.exists) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Student not found")),
-        );
-        setState(() => _isSubmitting = false);
-        return;
-      }
+
 
       // Extract academic year from student data
-      final academicYear = studentDoc.data()?['academicInfo']?['academicYear'] ?? '2024-2025';
+      final academicYear = studentDoc.data()?['academicInfo']?['academicYear'] ?? '2015-2016';
+      final studentData = studentDoc.data() as Map<String, dynamic>;
 
       // Create the composite document ID
       final paymentDocId = '${academicYear}_$rollNo';
 
-      // ✅ Use set with merge: true to create or update the payment document
+      // ✅ 1. Create enrollment request for OLD student
+      await firestore.collection('enrollment_requests').add({
+        "studentId": rollNo,
+        "studentName": studentName,
+        "studentType": "old",
+        "courseYear": _selectedCourseYear,
+        "programType": _isBECourse ? "B.E" : (_isMECourse ? "M.E" : "Unknown"),
+        "major": studentData['smajor'] ?? 'N/A',
+        "academicYear": academicYear,
+        "paymentAmount": double.parse(payAmount),
+        "paymentReference": qrCode,
+        "paymentDate": payDate,
+        "paymentTime": paymentTime,
+        "paymentStatus": "paid",
+        "status": "Pending",
+        "requestDate": FieldValue.serverTimestamp(),
+        "lastUpdated": FieldValue.serverTimestamp(),
+        "approvedBy": null,
+        "approvedDate": null,
+      });
+
+      // ✅ 2. Update student's enrollment status to "pending"
+      await firestore.collection('students').doc(rollNo).update({
+        'academicInfo.enrollStatus': 'pending',
+        'lastUpdated': FieldValue.serverTimestamp(),
+      });
+
+      // ✅ 3. Update paymentInfo collection
       await firestore.collection('paymentInfo').doc(paymentDocId).set({
         "studentId": rollNo,
         "academicYear": academicYear,
+        "courseYear": _selectedCourseYear,
+        "programType": _isBECourse ? "B.E" : (_isMECourse ? "M.E" : "Unknown"),
         "qr_code": qrCode,
         "pay_date": payDate,
+        "pay_time": paymentTime,
         "pay_amount": double.parse(payAmount),
         "paymentStatus": "paid",
+        "studentType": "old",
         "lastUpdated": FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      // Also update enrollment request payment status if needed
-      final enrollmentQuery = await firestore.collection('enrollment_requests')
-          .where('studentId', isEqualTo: rollNo)
-          .where('status', isEqualTo: 'Pending')
-          .limit(1)
-          .get();
-
-      if (enrollmentQuery.docs.isNotEmpty) {
-        await enrollmentQuery.docs.first.reference.update({
-          "paymentStatus": "paid",
-          "lastUpdated": FieldValue.serverTimestamp(),
-        });
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ Payment updated successfully")),
+      // Show success dialog with Yes/No buttons
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              Text(
+                "submitted".tr(),
+                style: const TextStyle(
+                  color: Colors.indigo,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "pdfVoucher".tr(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+          actions: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                // No button - goes to Home Screen
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MIITHomePage()),
+                            (route) => false,
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      "no".tr(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Yes button - goes to PDF Voucher Screen
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PdfVoucherScreen(
+                            rollNo: rollNo,
+                            studentName: studentName,
+                            referenceNo: qrCode,
+                            amount: payAmount,
+                            date: payDate,
+                            time: paymentTime,
+                            courseYear: _selectedCourseYear,
+                            programType: _isBECourse ? "B.E (Bachelor)" : "M.E (Master)",
+                          ),
+                        ),
+                      );
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      "yes".tr(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       );
 
-      // Optional: Clear form after success
-      referenceController.clear();
-      dateController.clear();
-      amountController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Payment and enrollment request submitted successfully")),
+      );
 
     } catch (e) {
       print("Firebase Error: $e");
@@ -485,4 +874,3 @@ class _OldStudentPaymentQRState extends State<OldStudentPaymentQR> {
     }
   }
 }
-

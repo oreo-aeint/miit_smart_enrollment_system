@@ -6,6 +6,7 @@ import 'my_drawer.dart';
 import 'old_student_enrollment_app.dart';
 import 'package:miit_project/components/text.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'old_student_enrollment_app.dart';
 
 // ✅ University Rules
 const String universityRules = '''
@@ -87,6 +88,7 @@ class OldUniRules extends StatefulWidget {
   final dynamic studentData;
   final String studentId;
 
+
   const OldUniRules({Key? key, required this.studentData, required this.studentId}) : super(key: key);
 
   @override
@@ -95,6 +97,7 @@ class OldUniRules extends StatefulWidget {
 
 class _OldUniRulesState extends State<OldUniRules> {
   bool isAgreed = false;
+
 
   @override
   Widget build(BuildContext context) {

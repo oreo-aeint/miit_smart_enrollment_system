@@ -8,6 +8,84 @@ import 'package:miit_project/components/input_text_box.dart';
 import 'package:miit_project/components/button.dart';
 import 'package:miit_project/components/text.dart';
 
+// Animated Loading Dots Widget
+class AnimatedLoadingDots extends StatefulWidget {
+  final Color color;
+
+  const AnimatedLoadingDots({Key? key, this.color = Colors.white}) : super(key: key);
+
+  @override
+  State<AnimatedLoadingDots> createState() => _AnimatedLoadingDotsState();
+}
+
+class _AnimatedLoadingDotsState extends State<AnimatedLoadingDots>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 900),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildAnimatedDot(0),
+        const SizedBox(width: 8),
+        _buildAnimatedDot(1),
+        const SizedBox(width: 8),
+        _buildAnimatedDot(2),
+      ],
+    );
+  }
+
+  Widget _buildAnimatedDot(int index) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final delay = index * 0.3;
+        double value = (_controller.value + delay) % 1.0;
+        double scale = 0.3 + (value * 0.7);
+        double opacity = 0.3 + (value * 0.7);
+
+        return Transform.scale(
+          scale: scale,
+          child: Opacity(
+            opacity: opacity,
+            child: Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: widget.color,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: widget.color.withOpacity(0.5),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
 
@@ -59,10 +137,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('adminLoggedIn', true);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AdminDrawer()),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminDrawer()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
       String errorMessage = "Login failed.";
       if (e.code == 'user-not-found') {
@@ -73,9 +153,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         errorMessage = "Invalid email format.";
       }
 
-      _showErrorDialog(errorMessage);
+      if (mounted) {
+        _showErrorDialog(errorMessage);
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -213,12 +297,32 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : ActionButton(
-                  text: "login".tr(),
-                  icon: Icons.login,
-                  onPressed: _loginAdmin,
+
+                // ========== UPDATED LOGIN BUTTON WITH BEAUTIFUL LOADING ==========
+                SizedBox(
+                  width: 150,  // ← Short button width
+                  child: _isLoading
+                      ? Container(
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF87CEFA), Color(0xFFADD8E6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Center(
+                      child: AnimatedLoadingDots(
+                        color: Colors.indigo,
+                      ),
+                    ),
+                  )
+                      : ActionButton(
+                    text: "login".tr(),
+                    icon: Icons.login,
+                    onPressed: _loginAdmin,
+                  ),
                 ),
               ],
             ),

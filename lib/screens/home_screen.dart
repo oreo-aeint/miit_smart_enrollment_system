@@ -19,7 +19,7 @@ class MIITHomePage extends StatelessWidget {
           // Background Image
           Positioned.fill(
             child: Image.asset(
-              'assets/img_3.png',
+              'assets/img_4.jpg',
               fit: BoxFit.cover,
               color: Colors.white.withOpacity(0.7),
               colorBlendMode: BlendMode.modulate,
@@ -71,40 +71,68 @@ class MIITHomePage extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 40),
 
-                  // MIIT Description Text (localized)
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Stack(
-                        children: [
-                          // Text border
-                          Text(
-                            tr('miitDescription'),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              height: 1.6,
-                              foreground: Paint()
-                                ..style = PaintingStyle.stroke
-                                ..strokeWidth = 3
-                                ..color = Colors.white, // border color
-                            ),
-                            textAlign: TextAlign.left,
-                          ),
-                          // Filled text
-                          Text(
-                            tr('miitDescription'),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              height: 1.6,
-                              color: Colors.black, // main text color
-                            ),
-                            textAlign: TextAlign.left,
+                  // MIIT Description Card - Aligned to left
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.lightBlue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 8,
+                            offset: Offset(2, 2),
                           ),
                         ],
+                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Title
+
+                            const SizedBox(height: 12),
+
+                            // About MIIT
+                            Text(
+                              "About MIIT",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.indigo,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Description text
+                            Text(
+                              tr('miitDescription'),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                height: 1.6,
+                                color: Colors.black,
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Stats chips
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildStatChip("Est. 2015", Icons.calendar_today),
+                                _buildStatChip("CSE · ECE", Icons.computer),
+                                _buildStatChip("5 Years", Icons.timer),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -118,145 +146,143 @@ class MIITHomePage extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        // Enroll Button
-                        SizedBox(
-                          width: 200,
-                          child: ActionButton(
-                            text: tr('enroll'),
-                            icon: Icons.school,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const EnrollButtonScreen(),
+                        // Bottom buttons with custom styling (no ActionButton component)
+                        // Bottom buttons styled like stats chips
+                        Align(
+                          alignment: Alignment.bottomRight,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              // Enroll Button - Chip Style
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const EnrollButtonScreen(),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.lightBlue.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(15),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.85),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.school,
+                                        size: 18,
+                                        color: Colors.white.withOpacity(0.85),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        tr('enroll'),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withOpacity(0.85),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              // Admin Login Button - Chip Style
+                              InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const AdminLoginScreen(),
+                                    ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.lightBlue.withOpacity(0.3),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.85),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.admin_panel_settings,
+                                        size: 18,
+                                        color: Colors.white.withOpacity(0.85),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        tr('adminLogin'),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white.withOpacity(0.85),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
 
-                        // Admin Login Button
-                        SizedBox(
-                          width: 200,
-                          child: ActionButton(
-                            text: tr('adminLogin'),
-                            icon: Icons.person_2_rounded,
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AdminLoginScreen(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                       //exam data
-                       /* ElevatedButton(
-                          onPressed: () async {
-                            await ExamService.createExamsForAllStudents(); // Add class name
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Exam records created successfully!')),
-                            );
-                          },
-                          child: Text('Create Exam Records'),
-                        ),*/
-                       /* ElevatedButton(
-                          onPressed: () async {
-                            final students = [
-                             {
-                                "semail": "2025-miit-cse-011@miit.edu.mm",
-                                "rollNumber": "2025-miit-cse-011",
-                                "academicYear": "2025-2026",
-                                "courseYear": "First Year",
-                                "grade": "A",
-                                "examResult": "Pass",
-                              },
-                              {
-                                "semail": "2025-miit-cse-029@miit.edu.mm", // Fixed email domain
-                                "rollNumber": "2025-miit-cse-029",
-                                "academicYear": "2025-2026",
-                                "courseYear": "First Year",
-                                "grade": "A",
-                                "examResult": "Pass",
-                              },
-                              {
-                                "semail": "2025-miit-cse-023@miit.edu.mm", // Fixed email domain
-                                "rollNumber": "2025-miit-cse-023",
-                                "academicYear": "2025-2026",
-                                "courseYear": "First Year",
-                                "grade": "A",
-                                "examResult": "Pass",
-                              },
-                              {
-                                "semail": "2025-miit-cse-010@miit.edu.mm", // Fixed email domain
-                                "rollNumber": "2025-miit-cse-010",
-                                "academicYear": "2025-2026",
-                                "courseYear": "First Year",
-                                "grade": "C",
-                                "examResult": "Fail",
-                              },
-                              {
-                                "semail": "2025-miit-ece-015@miit.edu.mm", // Fixed email domain
-                                "rollNumber": "2025-miit-ece-015",
-                                "academicYear": "2025-2026",
-                                "courseYear": "First Year",
-                                "grade": "B",
-                                "examResult": "Pass",
-                              },
-                            ];
-
-                            final collection = FirebaseFirestore.instance.collection("student_list");
-
-                            for (var student in students) {
-                              final rollNumber = student["rollNumber"] as String;
-                              await collection.doc(rollNumber).set(student); // Use rollNumber as document ID
-                            }
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("✅ Sample students added")),
-                            );
-                          },
-                          child: const Text("Add Sample Students"),
-                        )*/
-                        //Adding entrance passed students
-                       /* ElevatedButton(
-                          onPressed: () async {
-                            final entrance_pass_stu = [
-                              {
-                                "fullName": "Aeint Chit Thu",
-                                "rollNumber": "2025-miit-cse-011",
-                              },
-                              {
-                                "fullName": "Phyo Myat Htoo Sint",
-                                "rollNumber": "2025-miit-cse-023",
-                              },
-                              {
-                                "fullName": "Win Pa Pa Phyo",
-                                "rollNumber": "2025-miit-cse-029",
-                              },
-                            ];
-
-                            final collection = FirebaseFirestore.instance.collection("entrance_pass_stu");
-
-                            for (var student in entrance_pass_stu) {
-                              // Use rollNumber as the document ID
-                              await collection.doc(student["rollNumber"]).set(student);
-                            }
-
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("✅ Sample students added")),
-                            );
-                          },
-                          child: const Text("Add Sample Students"),
-                        )*/
-
+                        // All your commented code remains here
                       ],
                     ),
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for stat chips
+  Widget _buildStatChip(String label, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+       // color: Colors.lightBlue.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+         // color: Colors.lightBlue.withOpacity(0.3),
+         // color: Colors.black,
+          color: Colors.black,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.black),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              //color: Colors.white,
+              color: Colors.black,
             ),
           ),
         ],

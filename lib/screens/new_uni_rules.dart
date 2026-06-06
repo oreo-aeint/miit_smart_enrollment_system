@@ -2,7 +2,9 @@
 // uni_rules.dart
 // uni_rules.dart
 import 'package:flutter/material.dart';
+
 import 'my_drawer.dart';
+import 'new_stu_photo.dart';
 import 'new_student_enrollment_app.dart';
 import 'package:miit_project/components/text.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -86,7 +88,18 @@ const String universityFourRules = '''
 ''';
 
 class NewUniRules extends StatefulWidget {
-  const NewUniRules({super.key});
+  final Map<String, dynamic>? studentData;
+  final String? studentId;
+  final String admissionNo;
+  final String fullName;
+
+  const NewUniRules({
+    super.key,
+    this.studentData,
+    this.studentId,
+    required this.admissionNo,
+    required this.fullName,
+  });
 
   @override
   State<NewUniRules> createState() => _UniRulesState();
@@ -281,7 +294,15 @@ class _UniRulesState extends State<NewUniRules> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const NewStudentEnrollmentApp(),
+                   builder: (context) => NewStudentEnrollmentApp(
+                      studentData: widget.studentData,
+                      studentId: widget.studentId,
+                      admissionNo: widget.admissionNo, // ✅ This is passed
+                      fullName: widget.fullName,       // ✅ This is passed
+                    ),
+                    /*builder: (context) => NewStudentPhotoUpload(studentData: {},
+                          // ✅ This is passed
+                    ),*/
                   ),
                 );
               }

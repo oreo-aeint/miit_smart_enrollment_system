@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.miit_project">  <!-- Change this -->
 
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+
     <application
         android:label="miit_project"
         android:icon="@mipmap/ic_launcher">

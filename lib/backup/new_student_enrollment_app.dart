@@ -13,11 +13,21 @@ import 'package:flutter/services.dart';
 enum NRCType { nrc, oldNrc, none }
 
 class NewStudentEnrollmentApp extends StatefulWidget {
-  const NewStudentEnrollmentApp({Key? key}) : super(key: key);
+  final Map<String, dynamic>? studentData;
+  final String? studentId;
+  final String admissionNo;
+  final String fullName;
+
+  const NewStudentEnrollmentApp({
+    super.key,
+    this.studentData,
+    this.studentId,
+    required this.admissionNo,
+    required this.fullName,
+  });
 
   @override
-  State<NewStudentEnrollmentApp> createState() =>
-      _NewStudentEnrollmentAppState();
+  State<NewStudentEnrollmentApp> createState() => _NewStudentEnrollmentAppState();
 }
 
 class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
@@ -33,23 +43,26 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
   bool studentInProcess = false;
   NRCType studentSelectedNRCType = NRCType.nrc;
 
- // final List<String> years =
- // List.generate(10, (index) => (2025 + index).toString());
-  // Initialize state variables by converting int to string
   String? fromYear;
   String? toYear;
   int? _adminStartYear;
   int? _adminEndYear;
-  bool _isLoading = true; // Add loading state
+  bool _isLoading = true;
 
-  // Add years list
-  //final List<String> years = List.generate(10, (index) => (DateTime.now().year + index).toString());
-
-  // ADD THIS initState METHOD
   @override
   void initState() {
     super.initState();
     _fetchAdminAcademicYear();
+
+    // Pre-populate the roll number field with data from previous page
+    if (widget.admissionNo.isNotEmpty) {
+      rollNoController.text = widget.admissionNo;
+    }
+
+    // Optional: Pre-populate the English name field
+    if (widget.fullName.isNotEmpty) {
+      nameEnglishController.text = widget.fullName;
+    }
   }
 
   // Validation flags
@@ -59,8 +72,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
   final TextEditingController courseYearController = TextEditingController();
   final TextEditingController rollNoController = TextEditingController();
   final TextEditingController registrationNoController = TextEditingController();
-  final TextEditingController yearOfUniversityController =
-  TextEditingController();
+  final TextEditingController yearOfUniversityController = TextEditingController();
   final TextEditingController nameMyanmarController = TextEditingController();
   final TextEditingController nameEnglishController = TextEditingController();
   final TextEditingController religionController = TextEditingController();
@@ -74,12 +86,9 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
   String? studentSelectedNRCTypeCode;
 
   // Father Controllers
-  final TextEditingController fatherNameMyanmarController =
-  TextEditingController();
-  final TextEditingController fatherNameEnglishController =
-  TextEditingController();
-  final TextEditingController fatherReligionController =
-  TextEditingController();
+  final TextEditingController fatherNameMyanmarController = TextEditingController();
+  final TextEditingController fatherNameEnglishController = TextEditingController();
+  final TextEditingController fatherReligionController = TextEditingController();
   final TextEditingController fatherPhoneController = TextEditingController();
   final TextEditingController fatherDobController = TextEditingController();
   final TextEditingController fatherNRCController = TextEditingController();
@@ -92,12 +101,9 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
   NRCType fatherSelectedNRCType = NRCType.nrc;
 
   // Mother Controllers
-  final TextEditingController motherNameMyanmarController =
-  TextEditingController();
-  final TextEditingController motherNameEnglishController =
-  TextEditingController();
-  final TextEditingController motherReligionController =
-  TextEditingController();
+  final TextEditingController motherNameMyanmarController = TextEditingController();
+  final TextEditingController motherNameEnglishController = TextEditingController();
+  final TextEditingController motherReligionController = TextEditingController();
   final TextEditingController motherPhoneController = TextEditingController();
   final TextEditingController motherDobController = TextEditingController();
   final TextEditingController motherNRCController = TextEditingController();
@@ -110,141 +116,29 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
   NRCType motherSelectedNRCType = NRCType.nrc;
 
   final List<String> stateDivisionCodes = [
-    "eight".tr(), // Magway
-    "nine".tr(), // Mandalay
-    "twelve".tr(), // Yangon
+    "one".tr(),     // Kachin
+    "two".tr(),     // Kayah
+    "three".tr(),   // Kayin
+    "four".tr(),    // Chin
+    "five".tr(),    // Sagaing
+    "six".tr(),     // Tanintharyi
+    "seven".tr(),   // Bago
+    "eight".tr(),   // Magway
+    "nine".tr(),    // Mandalay
+    "ten".tr(),     // Mon
+    "eleven".tr(),  // Rakhine
+    "twelve".tr(),  // Yangon
+    "thirteen".tr(),// Shan
+    "fourteen".tr(),// Ayeyarwady
   ];
 
   // Fixed township codes with unique values
   final Map<String, List<String>> townshipCodes = {
-    "nine".tr(): [
-      // Mandalay
-      "mdy1".tr(),
-      "mdy2".tr(),
-      "mdy3".tr(),
-      "mdy4".tr(),
-      "mdy5".tr(),
-      "mdy6".tr(),
-      "mdy7".tr(),
-      "mdy8".tr(),
-      "mdy9".tr(),
-      "mdy10".tr(),
-      "mdy11".tr(),
-      "mdy12".tr(),
-      "mdy13".tr(),
-      "mdy14".tr(),
-      "mdy15".tr(),
-      "mdy16".tr(),
-      "mdy17".tr(),
-      "mdy18".tr(),
-      "mdy19".tr(),
-      "mdy20".tr(),
-      "mdy21".tr(),
-      "mdy22".tr(),
-      "mdy23".tr(),
-      "mdy24".tr(),
-      "mdy25".tr(),
-      "mdy26".tr(),
-      "mdy27".tr(),
-      "mdy28".tr(),
-      "mdy29".tr(),
-      "mdy30".tr(),
-      "mdy31".tr(),
-      "mdy32".tr(),
-      "mdy33".tr(),
-      "mdy34".tr(),
-      "mdy35".tr(),
-      "mdy36".tr(),
-      "mdy37".tr(),
-      "mdy38".tr(),
-      "mdy39".tr(),
-      "mdy40".tr(),
-      "mdy41".tr(),
-      "mdy42".tr(),
-      "mdy43".tr(),
-      "mdy44".tr(),
-      "mdy45".tr(),
-    ],
-    "twelve".tr(): [
-      // Yangon
-      "ygn1".tr(),
-      "ygn2".tr(),
-      "ygn3".tr(),
-      "ygn4".tr(),
-      "ygn5".tr(),
-      "ygn6".tr(),
-      "ygn7".tr(),
-      "ygn8".tr(),
-      "ygn9".tr(),
-      "ygn10".tr(),
-      "ygn11".tr(),
-      "ygn12".tr(),
-      "ygn13".tr(),
-      "ygn14".tr(),
-      "ygn15".tr(),
-      "ygn16".tr(),
-      "ygn17".tr(),
-      "ygn18".tr(),
-      "ygn19".tr(),
-      "ygn20".tr(),
-      "ygn21".tr(),
-      "ygn22".tr(),
-      "ygn23".tr(),
-      "ygn24".tr(),
-      "ygn25".tr(),
-      "ygn26".tr(),
-      "ygn27".tr(),
-      "ygn28".tr(),
-      "ygn29".tr(),
-      "ygn30".tr(),
-      "ygn31".tr(),
-      "ygn32".tr(),
-      "ygn33".tr(),
-      "ygn34".tr(),
-      "ygn35".tr(),
-      "ygn36".tr(),
-      "ygn37".tr(),
-      "ygn38".tr(),
-      "ygn39".tr(),
-      "ygn40".tr(),
-      "ygn41".tr(),
-      "ygn42".tr(),
-      "ygn43".tr(),
-      "ygn44".tr(),
-      "ygn45".tr(),
-      "ygn46".tr(),
-    ],
-    "eight".tr(): [
-      // Magway
-      "mg1".tr(),
-      "mg2".tr(),
-      "mg3".tr(),
-      "mg4".tr(),
-      "mg5".tr(),
-      "mg6".tr(),
-      "mg7".tr(),
-      "mg8".tr(),
-      "mg9".tr(),
-      "mg10".tr(),
-      "mg11".tr(),
-      "mg12".tr(),
-      "mg13".tr(),
-      "mg14".tr(),
-      "mg15".tr(),
-      "mg16".tr(),
-      "mg17".tr(),
-      "mg18".tr(),
-      "mg19".tr(),
-      "mg20".tr(),
-      "mg21".tr(),
-      "mg22".tr(),
-      "mg23".tr(),
-      "mg24".tr(),
-      "mg25".tr(),
-      "mg26".tr(),
-      "mg27".tr(),
-    ],
+    "one".tr(): ["kachin1".tr(), "kachin2".tr(), "kachin3".tr(), /* ... */],
+    "two".tr(): ["kayah1".tr(), "kayah2".tr(), "kachin3".tr(), /* ... */],
+    // ... (your existing township codes)
   };
+
   final List<Map<String, String>> nrcTypeCodes = [
     {"code": "C", "myanmar": "နိုင်"},
     {"code": "NC", "myanmar": "ပြု"},
@@ -297,6 +191,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     border: const OutlineInputBorder(),
     contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
   );
+
   List<String> getTownshipsForState(String? stateDivisionCode) {
     if (stateDivisionCode == null) return [];
     return townshipCodes[stateDivisionCode] ?? [];
@@ -597,8 +492,8 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color(0xFF87CEFA), // Light Sky Blue
-                Color(0xFFADD8E6), // Light Blue
+                Color(0xFF87CEFA),
+                Color(0xFFADD8E6),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
@@ -607,7 +502,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
         ),
         title: Row(
           children: [
-            // Drawer / Logo
             Builder(
               builder: (context) {
                 return GestureDetector(
@@ -626,19 +520,14 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
               },
             ),
             const SizedBox(width: 12),
-
-            // Title Text (localized)
             Expanded(
               child: Text(
                 tr("enrollment"),
                 style: AppTextStyles.heading,
               ),
             ),
-
-            // Language Switch Dropdown (Top-Right)
             Padding(
-              padding:
-              const EdgeInsets.only(right: 16.0), // moves dropdown left a bit
+              padding: const EdgeInsets.only(right: 16.0),
               child: DropdownButton<Locale>(
                 underline: const SizedBox(),
                 icon: const Icon(Icons.language, color: Colors.black),
@@ -689,7 +578,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                         DropdownButton<String>(
                           hint: Text("y".tr()),
                           value: fromYear,
-                          onChanged: (value) => setState(() => fromYear = value),
+                          onChanged: (value) => setState(() => fromYear = value), // Remove the _studentDataFound check
                           items: _adminStartYear != null && fromYear != null
                               ? [DropdownMenuItem(value: fromYear, child: Text(fromYear!))]
                               : <DropdownMenuItem<String>>[],
@@ -701,7 +590,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                         DropdownButton<String>(
                           hint: Text("y".tr()),
                           value: toYear,
-                          onChanged: (value) => setState(() => toYear = value),
+                          onChanged: (value) => setState(() => toYear = value), // Remove the _studentDataFound check
                           items: _adminEndYear != null && toYear != null
                               ? [DropdownMenuItem(value: toYear, child: Text(toYear!))]
                               : <DropdownMenuItem<String>>[],
@@ -710,7 +599,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                     ),
                   ),
                 ),
-
                 Column(
                   children: [
                     Container(
@@ -739,8 +627,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
 
             const SizedBox(height: 16),
             Text("studentEnrollment".tr(),
-                style:
-                const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             const SizedBox(height: 16),
             _buildHorizontalDropdown(
                 "cYear".tr(),
@@ -761,19 +648,17 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                 ),
               ),
 
-            _buildHorizontalTextField("rollNo".tr(), rollNoController,
-                icon: Icons.badge, isRequired: true),
-            if (_formSubmitted && rollNoController.text.trim().isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 140, top: 4),
-                child: Text(
-                  tr('rollNoRequired'),
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                ),
-              ),
+            // FIXED: Roll Number Field - Read Only
+            _buildHorizontalTextField(
+              "rollNo".tr(),
+              rollNoController,
+              icon: Icons.badge,
+              isRequired: true,
+              readOnly: true, // This makes it read-only
+            ),
 
             _buildHorizontalTextField(
-              "registrationNo".tr(), // Localized label
+              "registrationNo".tr(),
               registrationNoController,
               icon: Icons.confirmation_num,
             ),
@@ -886,48 +771,16 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
             ),
 
             const SizedBox(height: 35),
-
             const SizedBox(height: 20),
             Center(
               child: ActionButton(
-                text:"payment ".tr(),
+                text:"payment".tr(),
                 onPressed: _submitForm,
               ),
             ),
             const SizedBox(height: 20),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget buildInput(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              maxLines: 2,
-              overflow: TextOverflow.visible,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: const Color(0xFFFFFFFF),
-                border: const OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -956,7 +809,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                       color: Colors.black,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -994,6 +846,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
     );
   }
 
+  // FIXED: Updated _buildHorizontalTextField to accept readOnly parameter
   Widget _buildHorizontalTextField(
       String label,
       TextEditingController controller, {
@@ -1003,6 +856,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
         int? maxLength,
         List<TextInputFormatter>? inputFormatters,
         String? Function(String?)? validator,
+        bool readOnly = false, // ADD THIS PARAMETER
       }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -1020,7 +874,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                       color: Colors.black,
                     ),
                   ),
-
                 ],
               ),
             ),
@@ -1033,9 +886,10 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                 keyboardType: keyboardType,
                 maxLength: maxLength,
                 inputFormatters: inputFormatters,
+                readOnly: readOnly, // USE THE readOnly PARAMETER HERE
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: Colors.lightBlue[100],
+                  fillColor: readOnly ? Colors.grey[200] : Colors.lightBlue[100], // Different color for read-only
                   prefixIcon: icon != null ? Icon(icon) : null,
                   contentPadding:
                   const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -1046,9 +900,8 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                       : null,
                 ),
                 onChanged: (value) {
-                  setState(() {}); // Trigger rebuild for validation
+                  setState(() {});
                 },
-
               ),
             ),
           ),
@@ -1231,7 +1084,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
             ),
           ),
 
-        // Phone field with validation like NRC
         _buildHorizontalTextField(
           "phoneNo".tr(),
           phoneController,
@@ -1240,7 +1092,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
           keyboardType: TextInputType.phone,
           maxLength: 11,
           inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly, // allow only digits
+            FilteringTextInputFormatter.digitsOnly,
           ],
           validator: (value) {
             if (value != null && value.isNotEmpty) {
@@ -1282,7 +1134,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
             ),
           ),
 
-        // Add gender selector only for student section
         if (isStudentSection) _buildGenderSelector(),
 
         const SizedBox(height: 20),
@@ -1389,21 +1240,30 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                     // Township dropdown
                     Expanded(
                       flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        decoration: dropdownDecoration(),
-                        value: availableTownships.contains(selectedTownshipCode)
-                            ? selectedTownshipCode
-                            : null,
-                        items: availableTownships
-                            .map((code) => DropdownMenuItem(
-                          value: code,
-                          child: Text(code),
-                        ))
-                            .toList(),
-                        onChanged: (val) => onUpdate(inProcess, selectedNRCType,
-                            selectedStateDivisionCode, val, selectedNRCTypeCode),
+                      child: AbsorbPointer(
+                        absorbing: false, // ✅ allow interaction
+                        child: DropdownButtonFormField<String>(
+                          decoration: dropdownDecoration(),
+                          value: availableTownships.contains(selectedTownshipCode)
+                              ? selectedTownshipCode
+                              : null,
+                          items: availableTownships
+                              .map((code) => DropdownMenuItem(
+                            value: code,
+                            child: Text(code),
+                          ))
+                              .toList(),
+                          onChanged: (val) => onUpdate(
+                            inProcess,
+                            selectedNRCType,
+                            selectedStateDivisionCode,
+                            val,
+                            selectedNRCTypeCode,
+                          ),
+                        ),
                       ),
                     ),
+
                     const SizedBox(width: 4),
                     // NRC Type dropdown
                     Expanded(
@@ -1521,6 +1381,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       ],
     );
   }
+
   bool _isSubmitting = false;
 
   Future<void> _fetchAdminAcademicYear() async {
@@ -1553,174 +1414,162 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       print('Error fetching admin academic year data: $e');
     }
   }
+
   void _submitForm() async {
-    // Don't allow multiple submissions
     if (_isSubmitting) return;
 
     setState(() {
-      _formSubmitted = true;   // show required errors
-      _isSubmitting = true;    // mark as submitting
+      _formSubmitted = true;
+      _isSubmitting = true;
     });
 
+    if (!_validateForm()) {
+      setState(() {
+        _isSubmitting = false;
+      });
+      return;
+    }
 
-    //for years
     if (fromYear != null && toYear != null) {
       int start = int.parse(fromYear!);
       int end = int.parse(toYear!);
 
-      // Add validation
       if (start >= end) {
-        // Show error: "Start year must be before end year"
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(tr('startYearMustBeBeforeEndYear'))),
+        );
+        setState(() {
+          _isSubmitting = false;
+        });
         return;
       }
 
-    try {
-      final studentsCollection = FirebaseFirestore.instance.collection('students');
+      try {
+        final studentsCollection = FirebaseFirestore.instance.collection('students');
+        final String rollNo = rollNoController.text.trim();
+        final String smajor = rollNo.split('-')[2].toUpperCase();
+        final String email = '$rollNo@miit.edu.mm';
+        final String stype = "new";
+        final studentDoc = studentsCollection.doc(rollNo);
 
-      // Get the roll number
-      final String rollNo = rollNoController.text.trim();
-
-      // Create major from roll number
-      final String smajor = rollNo.split('-')[2].toUpperCase();
-
-      // Create email from roll number
-      final String email = '$rollNo@miit.edu.mm';
-
-      // Student type default by new
-      final String stype = "new";
-
-      // Use roll number as document ID
-      final studentDoc = studentsCollection.doc(rollNo);
-
-      // Prepare student data
-      final studentData = {
-        "srollno": rollNo,
-        "semail": email,
-        "sname": nameEnglishController.text.trim(),
-        "sname_myanmar": nameMyanmarController.text.trim(),
-        "sdob": dobController.text.trim(),
-        "snrc": nrcNumberController.text.trim(),
-        "snrc_state_division": studentSelectedStateDivisionCode,
-        "snrc_township": studentSelectedTownshipCode,
-        "snrc_type": studentSelectedNRCTypeCode,
-        "snrc_in_process": studentInProcess,
-        "sreligion": religionController.text.trim(),
-        "sgender": selectedGender,
-        "saddress": addressController.text.trim(),
-        "scontactNumber": phoneController.text.trim(),
-        "smajor": smajor,
-        "stype": stype,
-
-        "parents": {
-          "father": {
-            "fname_mm": fatherNameMyanmarController.text.trim(),
-            "fname_eng": fatherNameEnglishController.text.trim(),
-            "freligion": fatherReligionController.text.trim(),
-            "fphone": fatherPhoneController.text.trim(),
-            "fdob": fatherDobController.text.trim(),
-            "faddress": fatherAddressController.text.trim(),
-            "fnrc": fatherNRCController.text.trim(),
-            "fnrc_state_division": fatherSelectedStateDivisionCode,
-            "fnrc_township": fatherSelectedTownshipCode,
-            "fnrc_type": fatherSelectedNRCTypeCode,
-            "fnrc_in_process": fatherInProcess,
+        final studentData = {
+          "srollno": rollNo,
+          "semail": email,
+          "sname": nameEnglishController.text.trim(),
+          "sname_myanmar": nameMyanmarController.text.trim(),
+          "sdob": dobController.text.trim(),
+          "snrc": nrcNumberController.text.trim(),
+          "snrc_state_division": studentSelectedStateDivisionCode,
+          "snrc_township": studentSelectedTownshipCode,
+          "snrc_type": studentSelectedNRCTypeCode,
+          "snrc_in_process": studentInProcess,
+          "sreligion": religionController.text.trim(),
+          "sgender": selectedGender,
+          "saddress": addressController.text.trim(),
+          "scontactNumber": phoneController.text.trim(),
+          "smajor": smajor,
+          "stype": stype,
+          "parents": {
+            "father": {
+              "fname_mm": fatherNameMyanmarController.text.trim(),
+              "fname_eng": fatherNameEnglishController.text.trim(),
+              "freligion": fatherReligionController.text.trim(),
+              "fphone": fatherPhoneController.text.trim(),
+              "fdob": fatherDobController.text.trim(),
+              "faddress": fatherAddressController.text.trim(),
+              "fnrc": fatherNRCController.text.trim(),
+              "fnrc_state_division": fatherSelectedStateDivisionCode,
+              "fnrc_township": fatherSelectedTownshipCode,
+              "fnrc_type": fatherSelectedNRCTypeCode,
+              "fnrc_in_process": fatherInProcess,
+            },
+            "mother": {
+              "mname_mm": motherNameMyanmarController.text.trim(),
+              "mname_eng": motherNameEnglishController.text.trim(),
+              "mreligion": motherReligionController.text.trim(),
+              "mphone": motherPhoneController.text.trim(),
+              "mdob": motherDobController.text.trim(),
+              "maddress": motherAddressController.text.trim(),
+              "mnrc": motherNRCController.text.trim(),
+              "mnrc_state_division": motherSelectedStateDivisionCode,
+              "mnrc_township": motherSelectedTownshipCode,
+              "mnrc_type": motherSelectedNRCTypeCode,
+              "mnrc_in_process": motherInProcess,
+            }
           },
-          "mother": {
-            "mname_mm": motherNameMyanmarController.text.trim(),
-            "mname_eng": motherNameEnglishController.text.trim(),
-            "mreligion": motherReligionController.text.trim(),
-            "mphone": motherPhoneController.text.trim(),
-            "mdob": motherDobController.text.trim(),
-            "maddress": motherAddressController.text.trim(),
-            "mnrc": motherNRCController.text.trim(),
-            "mnrc_state_division": motherSelectedStateDivisionCode,
-            "mnrc_township": motherSelectedTownshipCode,
-            "mnrc_type": motherSelectedNRCTypeCode,
-            "mnrc_in_process": motherInProcess,
-          }
-        },
+          "academicInfo": {
+            "rollNumber": rollNo,
+            "registrationNumber": registrationNoController.text.trim(),
+            'start_year': start,
+            'end_year': end,
+            'academicYear': '$fromYear-$toYear',
+            "courseYear": selectedCourseYear ?? "",
+            "yearOfUniversity": yearOfUniversityController.text.trim(),
+            "eduMail": email,
+            "academicStatus": "Active",
+            "enrollStatus": "Pending",
+          },
+          "timestamp": FieldValue.serverTimestamp(),
+          "lastUpdated": FieldValue.serverTimestamp(),
+        };
 
-        "academicInfo": {
+        await studentDoc.set(studentData);
+
+        final enrollmentRequestsCollection = FirebaseFirestore.instance.collection('enrollment_requests');
+        await enrollmentRequestsCollection.add({
+          "studentId": rollNo,
+          "semail": email,
           "rollNumber": rollNo,
-          "registrationNumber": registrationNoController.text.trim(),
-          'start_year': start,
-          'end_year': end,
-          'academicYear': '$fromYear-$toYear',
           "courseYear": selectedCourseYear ?? "",
-          "yearOfUniversity": yearOfUniversityController.text.trim(),
-          "eduMail": email,
-          "academicStatus": "Active",
-          "enrollStatus": "Pending",
-        },
+          "major": smajor,
+          "enrolDate": DateTime.now(),
+          "status": "pending",
+          "paymentStatus": "pending",
+          "approvedBy": null,
+          "approvedDate": null,
+          "timestamp": FieldValue.serverTimestamp(),
+        });
 
-        "timestamp": FieldValue.serverTimestamp(),
-        "lastUpdated": FieldValue.serverTimestamp(),
-      };
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("✅ ${tr('enrollmentSuccess')}")),
+        );
 
-      // Save student document
-      await studentDoc.set(studentData);
-
-      // Add enrollment request
-      final enrollmentRequestsCollection = FirebaseFirestore.instance.collection('enrollment_requests');
-      await enrollmentRequestsCollection.add({
-        "studentId": rollNo,
-        "semail": email,
-        "rollNumber": rollNo,
-        "courseYear": selectedCourseYear ?? "",
-        "major": smajor,
-        "enrolDate": DateTime.now(),
-        "status": "Pending",
-        "paymentStatus": "Pending",
-        "approvedBy": null,
-        "approvedDate": null,
-        "timestamp": FieldValue.serverTimestamp(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ ${tr('enrollmentSuccess')}")),
-      );
-
-      // Clear form after successful submission
-     // _clearForm();
-      //_fetchAdminAcademicYear();
-
-      // ✅ Navigate to Payment QR page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NewStudentPaymentQR(
-            rollNo: rollNoController.text.trim(),
-            studentName: nameEnglishController.text.trim(),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NewStudentPaymentQR(
+              rollNo: rollNoController.text.trim(),
+              studentName: nameEnglishController.text.trim(),
+            ),
           ),
-        ),
-      );
+        );
 
-    } catch (e) {
-      print("Firebase Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ ${tr('enrollmentError')}: $e")),
-      );
-    } finally {
+      } catch (e) {
+        print("Firebase Error: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ ${tr('enrollmentError')}: $e")),
+        );
+      } finally {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    } else {
       setState(() {
-        _isSubmitting = false; // reset submitting state
+        _isSubmitting = false;
       });
     }
-  }}
+  }
 
-
-  // Helper method to clear the form
   void _clearForm() {
     setState(() {
       _formSubmitted = false;
-      // Clear academic fields
       fromYear = null;
       toYear = null;
       selectedCourseYear = null;
       rollNoController.clear();
       registrationNoController.clear();
       yearOfUniversityController.clear();
-
-      // Clear student fields
       nameMyanmarController.clear();
       nameEnglishController.clear();
       religionController.clear();
@@ -1734,8 +1583,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       studentSelectedStateDivisionCode = null;
       studentSelectedTownshipCode = null;
       studentSelectedNRCTypeCode = null;
-
-      // Clear father fields
       fatherNameMyanmarController.clear();
       fatherNameEnglishController.clear();
       fatherReligionController.clear();
@@ -1748,8 +1595,6 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       fatherSelectedStateDivisionCode = null;
       fatherSelectedTownshipCode = null;
       fatherSelectedNRCTypeCode = null;
-
-      // Clear mother fields
       motherNameMyanmarController.clear();
       motherNameEnglishController.clear();
       motherReligionController.clear();

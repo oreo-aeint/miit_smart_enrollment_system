@@ -1,17 +1,25 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // This will be generated automatically
 import 'screens/home_screen.dart';
+import 'firebase_options.dart'; // 🔹 Required for web
+import 'package:path_provider/path_provider.dart'; // Add this
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize EasyLocalization
   await EasyLocalization.ensureInitialized();
+  // Test path_provider before initializing Firebase
+  try {
+    print('🔧 Testing path_provider...');
+    final tempDir = await getTemporaryDirectory();
+    print('✅ Temporary directory: ${tempDir.path}');
+  } catch (e) {
+    print('❌ path_provider error: $e');
+  }
 
-  // Initialize Firebase
-  await _initializeFirebase();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // 🔹 Required for web
+  );
 
   runApp(
     EasyLocalization(
@@ -24,17 +32,6 @@ Future<void> main() async {
       child: const MIITApp(),
     ),
   );
-}
-
-Future<void> _initializeFirebase() async {
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Error initializing Firebase: $e');
-    // You might want to show an error screen or retry logic here
-  }
 }
 
 class MIITApp extends StatelessWidget {

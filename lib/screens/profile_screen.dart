@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:miit_project/screens/home_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,10 +14,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // Profile photo
   String profilePhotoUrl = '';
 
-  // User data
-  String username = 'Phyo Myat Htoo Sint';
-  String email = 'phyomyathtoosint@gmail.com';
-  String phoneNo = '+959 259539974';
+  // User data - will be fetched from Firebase
+  String email = '';
+  final User? user = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  // Load user data from Firebase
+  void _loadUserData() {
+    if (user != null) {
+      setState(() {
+        email = user!.email ?? 'No email';
+        // You can also get other user data like:
+        // profilePhotoUrl = user!.photoURL ?? '';
+        // displayName = user!.displayName ?? '';
+      });
+    }
+  }
 
   // Handle logout
   void _logout() {
@@ -32,9 +50,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text('cancel'.tr()),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                // Navigate to HomeScreen directly
+                // Sign out from Firebase
+                await FirebaseAuth.instance.signOut();
+                // Navigate to HomeScreen
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => MIITHomePage()),
@@ -91,7 +111,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -101,29 +120,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Center(child: _buildProfilePhoto()),
             ),
 
+            // Display email from Firebase
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Card(
+                color: Colors.lightBlue[50],
+                child: ListTile(
+                  leading: Icon(Icons.email, color: Colors.indigo),
+                  title: Text('email'.tr()),
+                  subtitle: Text(email.isEmpty ? 'loading'.tr() : email),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
             // Menu options
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 children: [
-                  _buildMenuOption('account'.tr(), Icons.person, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => AccountScreen(
-                        username: username,
-                        email: email,
-                        phoneNo: phoneNo,
-                        onProfileUpdated: (newUsername, newEmail, newPhoneNo) {
-                          setState(() {
-                            username = newUsername;
-                            email = newEmail;
-                            phoneNo = newPhoneNo;
-                          });
-                        },
-                      )),
-                    );
-                  }),
-                  const SizedBox(height: 8),
                   _buildMenuOption('changePassword'.tr(), Icons.lock, () {
                     Navigator.push(
                       context,
@@ -143,262 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-// Account Screen (separate page)
-class AccountScreen extends StatefulWidget {
-  final String username;
-  final String email;
-  final String phoneNo;
-  final Function(String, String, String) onProfileUpdated;
-
-  const AccountScreen({
-    super.key,
-    required this.username,
-    required this.email,
-    required this.phoneNo,
-    required this.onProfileUpdated,
-  });
-
-  @override
-  State<AccountScreen> createState() => _AccountScreenState();
-}
-
-class _AccountScreenState extends State<AccountScreen> {
-  Widget _buildInfoRow(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.lightBlue[50], // Light blue background
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.indigo, // Indigo text color
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.indigo, // Indigo text color
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('account'.tr(), style: const TextStyle(color: Colors.indigo,fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF87CEFA),
-                Color(0xFFADD8E6),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.indigo),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AccountEditScreen(
-                  username: widget.username,
-                  email: widget.email,
-                  phoneNo: widget.phoneNo,
-                  onProfileUpdated: widget.onProfileUpdated,
-                )),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Card(
-              color: Colors.white, // Light blue card background
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'accountInformation'.tr(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.indigo,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('username'.tr(), widget.username),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('email'.tr(), widget.email),
-                    const SizedBox(height: 8),
-                    _buildInfoRow('phoneNumber'.tr(), widget.phoneNo),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Account Edit Screen (separate page)
-class AccountEditScreen extends StatefulWidget {
-  final String username;
-  final String email;
-  final String phoneNo;
-  final Function(String, String, String) onProfileUpdated;
-
-  const AccountEditScreen({
-    super.key,
-    required this.username,
-    required this.email,
-    required this.phoneNo,
-    required this.onProfileUpdated,
-  });
-
-  @override
-  State<AccountEditScreen> createState() => _AccountEditScreenState();
-}
-
-class _AccountEditScreenState extends State<AccountEditScreen> {
-  // Controllers for editing
-  final TextEditingController _usernameController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _usernameController.text = widget.username;
-    _emailController.text = widget.email;
-    _phoneController.text = widget.phoneNo;
-  }
-
-  @override
-  void dispose() {
-    _usernameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    super.dispose();
-  }
-
-  // Handle account information update
-  void _updateAccountInfo() {
-    widget.onProfileUpdated(
-      _usernameController.text,
-      _emailController.text,
-      _phoneController.text,
-    );
-
-    // In a real app, you would save these changes to your backend
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('profileUpdated'.tr()),
-      ),
-    );
-
-    // Navigate back to profile screen
-    Navigator.pop(context);
-  }
-
-  Widget _buildFormField(String label, TextEditingController controller, IconData icon) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.indigo),
-        border: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.indigo),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.indigo),
-        ),
-        prefixIcon: Icon(icon, color: Colors.indigo),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('editProfile'.tr(), style: const TextStyle(color: Colors.indigo,fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Color(0xFF87CEFA),
-                Color(0xFFADD8E6),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.indigo),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'accountInformation'.tr(),
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.indigo,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _buildFormField('username'.tr(), _usernameController, Icons.alternate_email),
-            const SizedBox(height: 16),
-            _buildFormField('email'.tr(), _emailController, Icons.email),
-            const SizedBox(height: 16),
-            _buildFormField('phoneNumber'.tr(), _phoneController, Icons.phone),
-            const SizedBox(height: 32),
-            Center(
-              child: ElevatedButton(
-                onPressed: _updateAccountInfo,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                ),
-                child: Text('save'.tr(), style: const TextStyle(fontSize: 16)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Change Password Screen (separate page)
+// Change Password Screen (separate page) - Updated with Firebase Auth
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
 
@@ -407,23 +168,26 @@ class ChangePasswordScreen extends StatefulWidget {
 }
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
-  // Password change fields
-  String currentPassword = 'miit123';
-  String newPassword = '';
-
   // Controllers for editing
   final TextEditingController _currentPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _obscureCurrentPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  // Handle password change
-  void _changePassword() {
+  // Handle password change with Firebase Auth
+  Future<void> _changePassword() async {
     if (_currentPasswordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -442,24 +206,124 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return;
     }
 
-    // In a real app, you would verify the current password and update it
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('passwordChanged'.tr()),
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('passwordsDoNotMatch'.tr()),
+        ),
+      );
+      return;
+    }
+
+    if (_newPasswordController.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('passwordMustBe6Characters'.tr()),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final email = user?.email;
+
+      if (email == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('userNotLoggedIn'.tr()),
+          ),
+        );
+        return;
+      }
+
+      // Re-authenticate user before changing password
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: _currentPasswordController.text,
+      );
+
+      await user!.reauthenticateWithCredential(credential);
+
+      // Change password
+      await user.updatePassword(_newPasswordController.text);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('passwordChanged'.tr()),
+        ),
+      );
+
+      // Clear password fields and navigate back
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+
+      Navigator.pop(context);
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'passwordChangeFailed'.tr();
+
+      if (e.code == 'wrong-password') {
+        errorMessage = 'wrongCurrentPassword'.tr();
+      } else if (e.code == 'weak-password') {
+        errorMessage = 'weakPassword'.tr();
+      } else if (e.code == 'requires-recent-login') {
+        errorMessage = 'requiresRecentLogin'.tr();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('passwordChangeFailed'.tr()),
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildPasswordField(
+      String label,
+      TextEditingController controller,
+      bool obscureText,
+      VoidCallback onToggleVisibility,
+      ) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label.tr(),
+        labelStyle: const TextStyle(color: Colors.indigo),
+        border: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.indigo),
+        ),
+        focusedBorder: const OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.indigo),
+        ),
+        prefixIcon: const Icon(Icons.lock, color: Colors.indigo),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility : Icons.visibility_off,
+            color: Colors.indigo,
+          ),
+          onPressed: onToggleVisibility,
+        ),
       ),
     );
-
-    // Clear password fields and navigate back
-    _currentPasswordController.clear();
-    _newPasswordController.clear();
-    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('changePassword'.tr(), style: const TextStyle(color: Colors.indigo)),
+        title: Text('changePassword'.tr(), style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         flexibleSpace: Container(
           decoration: const BoxDecoration(
@@ -475,49 +339,43 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         ),
         iconTheme: const IconThemeData(color: Colors.indigo),
       ),
-      body: SingleChildScrollView(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 24),
-            TextField(
-              controller: _currentPasswordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'currentPassword',
-                labelStyle: TextStyle(color: Colors.indigo),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.indigo),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.indigo),
-                ),
-                prefixIcon: Icon(Icons.lock, color: Colors.indigo),
-              ).copyWith(labelText: 'currentPassword'.tr()),
-              onChanged: (value) {
-                setState(() {
-                  currentPassword = value;
-                });
-              },
+            // Display current user's email
+            Card(
+              color: Colors.lightBlue[50],
+              child: ListTile(
+                leading: Icon(Icons.email, color: Colors.indigo),
+                title: Text('currentEmail'.tr()),
+                subtitle: Text(FirebaseAuth.instance.currentUser?.email ?? ''),
+              ),
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _newPasswordController,
-              obscureText: true,
-              enabled: currentPassword.isNotEmpty,
-              decoration: InputDecoration(
-                labelText: 'newPassword'.tr(),
-                labelStyle: const TextStyle(color: Colors.indigo),
-                border: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.indigo),
-                ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.indigo),
-                ),
-                prefixIcon: const Icon(Icons.lock_outline, color: Colors.indigo),
-                hintText: currentPassword.isEmpty ? 'enterCurrentPasswordFirst'.tr() : '',
-              ),
+
+            _buildPasswordField(
+              'currentPassword',
+              _currentPasswordController,
+              _obscureCurrentPassword,
+                  () => setState(() => _obscureCurrentPassword = !_obscureCurrentPassword),
+            ),
+            const SizedBox(height: 16),
+            _buildPasswordField(
+              'newPassword',
+              _newPasswordController,
+              _obscureNewPassword,
+                  () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+            ),
+            const SizedBox(height: 16),
+            _buildPasswordField(
+              'confirmPassword',
+              _confirmPasswordController,
+              _obscureConfirmPassword,
+                  () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
             ),
             const SizedBox(height: 32),
             Center(
