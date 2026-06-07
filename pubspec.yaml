@@ -53,7 +53,7 @@ dependencies:
   pdf: ^3.10.7
   share_plus: ^7.2.0
   universal_html: ^2.2.4
-  mailer: ^6.0.1  # Required for email sending
+  mailer: ^6.1.0  # Required for email sending
   flutter_email_sender: ^6.0.0
   permission_handler: ^11.0.0
   device_info_plus: ^9.0.0
@@ -61,6 +61,13 @@ dependencies:
   android_intent_plus: ^5.1.0
   open_filex: ^4.4.0
   http: ^1.2.0
+  intl: ^0.20.2
+  emailjs: ^4.0.0
+  flutter_secure_storage: ^9.0.0
+  cloud_functions: ^5.6.2
+
+
+
 
 dev_dependencies:
   flutter_test:

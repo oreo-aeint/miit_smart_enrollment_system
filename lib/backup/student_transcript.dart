@@ -1,7 +1,7 @@
+import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -12,15 +12,17 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:universal_html/html.dart' as html;
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:http/http.dart' as http;
-import 'package:mailer/mailer.dart';
-import 'package:mailer/smtp_server.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:open_filex/open_filex.dart';
 
 class StudentTranscript extends StatefulWidget {
   final String transcriptRequestId;
   final String studentId;
   final String studentName;
   final String rollNumber;
+  final String? studentEmail;
   final VoidCallback? onTranscriptSent;
 
   const StudentTranscript({
@@ -29,6 +31,7 @@ class StudentTranscript extends StatefulWidget {
     required this.studentId,
     required this.studentName,
     required this.rollNumber,
+    this.studentEmail,
     this.onTranscriptSent,
   }) : super(key: key);
 
@@ -47,13 +50,8 @@ class _StudentTranscriptState extends State<StudentTranscript> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   Uint8List? _miitLogo;
   TextEditingController _emailController = TextEditingController();
-  String? _savedFilePath;
-
-  // Email configuration
-  final String _outlookSenderEmail = "registrar@miit.edu.mm";
-  final String _outlookSenderPassword = "PMHS@81204";
-  final String _outlookSmtpServer = "smtp.office365.com";
-  final int _outlookSmtpPort = 587;
+  String _manualStudentEmail = '';
+  final DeviceInfoPlugin _deviceInfo = DeviceInfoPlugin();
 
   // Platform detection
   bool get isAndroid => !kIsWeb && Platform.isAndroid;
@@ -64,83 +62,63 @@ class _StudentTranscriptState extends State<StudentTranscript> {
   void initState() {
     super.initState();
     _initializeAsync();
+    _checkAndRequestPermissions();
   }
 
-  // Initialize async operations
+  Future<void> _checkAndRequestPermissions() async {
+    if (Platform.isAndroid && !kIsWeb) {
+      final hasPermission = await _checkStoragePermissions();
+      if (!hasPermission && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Storage permission required for PDF generation'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<bool> _checkStoragePermissions() async {
+    if (kIsWeb) return true;
+
+    if (Platform.isAndroid) {
+      try {
+        if (await Permission.storage.isRestricted) {
+          final status = await Permission.manageExternalStorage.request();
+          return status.isGranted;
+        } else {
+          final status = await Permission.storage.request();
+          return status.isGranted;
+        }
+      } catch (e) {
+        print('Permission error: $e');
+        return false;
+      }
+    }
+    return true;
+  }
+
   Future<void> _initializeAsync() async {
     await _loadTranscriptData();
     _setupEmailController();
   }
 
   void _setupEmailController() {
-    final studentEmail = _getStudentMiitEmail();
-    _emailController.text = studentEmail;
-  }
-
-  String _getStudentMiitEmail() {
-    return '${widget.rollNumber}@miit.edu.mm';
+    if (widget.studentEmail != null && widget.studentEmail!.isNotEmpty) {
+      _emailController.text = widget.studentEmail!;
+      _manualStudentEmail = widget.studentEmail!;
+    } else if (_manualStudentEmail.isNotEmpty) {
+      _emailController.text = _manualStudentEmail;
+    } else {
+      _emailController.text = '';
+    }
   }
 
   @override
   void dispose() {
     _emailController.dispose();
     super.dispose();
-  }
-
-  // SAFE METHOD TO GET TEMPORARY DIRECTORY WITH FALLBACK
-  Future<Directory> _getSafeTemporaryDirectory() async {
-    if (kIsWeb) {
-      throw Exception('Web platform does not support file system directories');
-    }
-
-    try {
-      // Try to get temporary directory first
-      return await getTemporaryDirectory();
-    } catch (e) {
-      print('getTemporaryDirectory failed: $e');
-      try {
-        // Fallback to application documents directory
-        return await getApplicationDocumentsDirectory();
-      } catch (e2) {
-        print('getApplicationDocumentsDirectory also failed: $e2');
-        // Final fallback - create a temp directory in the current working directory
-        final tempDir = Directory('temp');
-        if (!await tempDir.exists()) {
-          await tempDir.create(recursive: true);
-        }
-        return tempDir;
-      }
-    }
-  }
-
-  // SAFE METHOD TO GET DOWNLOADS DIRECTORY
-  Future<Directory?> _getSafeDownloadsDirectory() async {
-    if (kIsWeb) return null;
-
-    try {
-      if (isAndroid) {
-        return await getDownloadsDirectory();
-      }
-      return null;
-    } catch (e) {
-      print('getDownloadsDirectory failed: $e');
-      return null;
-    }
-  }
-
-  // SAFE METHOD TO GET EXTERNAL STORAGE
-  Future<Directory?> _getSafeExternalStorageDirectory() async {
-    if (kIsWeb) return null;
-
-    try {
-      if (isAndroid) {
-        return await getExternalStorageDirectory();
-      }
-      return null;
-    } catch (e) {
-      print('getExternalStorageDirectory failed: $e');
-      return null;
-    }
   }
 
   Future<void> _loadLogo() async {
@@ -166,6 +144,18 @@ class _StudentTranscriptState extends State<StudentTranscript> {
       if (transcriptDoc.exists) {
         setState(() {
           _transcriptData = transcriptDoc.data() as Map<String, dynamic>;
+
+          if (widget.studentEmail == null && _transcriptData?.containsKey('email') == true) {
+            _manualStudentEmail = _transcriptData!['email'] ?? '';
+            _emailController.text = _manualStudentEmail;
+          }
+
+          if (_transcriptData?.containsKey('manualEmailUsed') == true) {
+            _manualStudentEmail = _transcriptData!['manualEmailUsed'] ?? '';
+            if (widget.studentEmail == null) {
+              _emailController.text = _manualStudentEmail;
+            }
+          }
         });
       }
 
@@ -410,65 +400,13 @@ class _StudentTranscriptState extends State<StudentTranscript> {
     });
   }
 
-  Future<String?> _savePDFToDevice(Uint8List pdfBytes) async {
-    try {
-      if (kIsWeb) {
-        await _savePdfForWeb(pdfBytes);
-        return null;
-      }
-
-      Directory saveDir;
-
-      if (isAndroid) {
-        // Try downloads directory first
-        final downloadsDir = await _getSafeDownloadsDirectory();
-        if (downloadsDir != null) {
-          saveDir = downloadsDir;
-        } else {
-          final externalDir = await _getSafeExternalStorageDirectory();
-          if (externalDir != null) {
-            saveDir = externalDir;
-          } else {
-            saveDir = await _getSafeTemporaryDirectory();
-          }
-        }
-      } else if (isIOS) {
-        saveDir = await _getSafeTemporaryDirectory();
-      } else {
-        saveDir = await _getSafeTemporaryDirectory();
-      }
-
-      if (!await saveDir.exists()) {
-        await saveDir.create(recursive: true);
-      }
-
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final fileName = 'MIIT_Transcript_${widget.rollNumber}_$timestamp.pdf';
-      final filePath = '${saveDir.path}/$fileName';
-
-      final file = File(filePath);
-      await file.writeAsBytes(pdfBytes, flush: true);
-
-      setState(() {
-        _savedFilePath = filePath;
-      });
-
-      if (kDebugMode) {
-        print('PDF saved to: $filePath');
-      }
-
-      return filePath;
-    } catch (e) {
-      print('Error saving PDF to device: $e');
-      return null;
-    }
-  }
-
+  // Save PDF for Web - downloads automatically
   Future<void> _savePdfForWeb(Uint8List pdfBytes) async {
     try {
+      final fileName = 'MIIT_Transcript_${widget.rollNumber}_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.pdf';
+
       final blob = html.Blob([pdfBytes], 'application/pdf');
       final url = html.Url.createObjectUrlFromBlob(blob);
-      final fileName = 'MIIT_Transcript_${widget.rollNumber}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
 
       final anchor = html.AnchorElement(href: url)
         ..download = fileName
@@ -483,474 +421,64 @@ class _StudentTranscriptState extends State<StudentTranscript> {
       });
 
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Transcript downloaded successfully!'),
-            duration: Duration(seconds: 3),
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('✓ PDF Downloaded Successfully!', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(fileName, style: const TextStyle(fontSize: 11)),
+                const Text('Check your Downloads folder', style: TextStyle(fontSize: 11)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
       print('Error saving PDF on web: $e');
-    }
-  }
-
-  Future<void> _shareFile(String filePath) async {
-    try {
-      final file = File(filePath);
-
-      if (!await file.exists()) {
-        throw Exception('PDF file not found');
-      }
-
-      await Share.shareXFiles(
-        [XFile(filePath)],
-        text: 'MIIT Official Transcript\n'
-            'Student: ${widget.studentName}\n'
-            'Roll Number: ${widget.rollNumber}\n'
-            'Date: ${DateFormat('dd/MM/yyyy').format(DateTime.now())}',
-        subject: 'MIIT Transcript - ${widget.studentName}',
-      );
-    } catch (e) {
-      print('Error sharing file: $e');
-    }
-  }
-
-  Future<void> _saveTranscriptPDF() async {
-    if (_isGeneratingPDF) return;
-
-    setState(() {
-      _isGeneratingPDF = true;
-    });
-
-    try {
-      final pdfBytes = await _generateTranscriptPDF();
-      final savedPath = await _savePDFToDevice(pdfBytes);
-
-      if (savedPath != null && !kIsWeb && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Transcript saved successfully!'),
-            duration: const Duration(seconds: 3),
-            action: SnackBarAction(
-              label: 'Share',
-              onPressed: () async {
-                await _shareFile(savedPath);
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error saving transcript: $e');
       if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error saving transcript: ${e.toString()}'),
+            content: Text('Error downloading: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGeneratingPDF = false;
-        });
-      }
     }
   }
 
-  // WEB-COMPATIBLE EMAIL SENDING USING HTML EMAIL (mailto:)
-  Future<bool> _sendEmailViaWeb({
-    required String to,
-    required String subject,
-    required String body,
-    required Uint8List attachment,
-    required String attachmentName,
-  }) async {
-    try {
-      // Show dialog with instructions for web
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.orange),
-                  SizedBox(width: 10),
-                  Text('Web Platform Notice'),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Email sending via SMTP is not available on web platform.\n\n',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const Text(
-                      'Option 1: Download and send manually',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '1. Click "Download PDF" to save the transcript\n'
-                          '2. Open your email client\n'
-                          '3. Send to: $to\n'
-                          '4. Attach the downloaded PDF',
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Option 2: Open in email client',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Click "Open Email Client" to compose an email with the subject and body pre-filled.',
-                      style: const TextStyle(fontSize: 13),
-                    ),
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Student Email:',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            to,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                TextButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    // Download PDF
-                    await _savePDFToDevice(attachment);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('PDF downloaded. Please email it manually.'),
-                          duration: Duration(seconds: 4),
-                        ),
-                      );
-                    }
-                  },
-                  child: const Text('Download PDF'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    // Open email client with mailto:
-                    final encodedSubject = Uri.encodeComponent(subject);
-                    final encodedBody = Uri.encodeComponent(body);
-                    final mailtoUrl = 'mailto:$to?subject=$encodedSubject&body=$encodedBody';
-                    html.window.open(mailtoUrl, '_blank');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                  ),
-                  child: const Text('Open Email Client'),
-                ),
-              ],
-            );
-          },
-        );
-      }
-
-      return false; // Email wasn't sent automatically via web
-    } catch (e) {
-      print('Error in web email flow: $e');
-      return false;
-    }
-  }
-
-  // ORIGINAL SMTP METHOD FOR MOBILE/DESKTOP
-  Future<bool> _sendEmailViaOutlook({
-    required String to,
-    required String subject,
-    required String body,
-    required Uint8List attachment,
-    required String attachmentName,
-  }) async {
-    // Check if we're on web - if so, use web method
-    if (kIsWeb) {
-      return _sendEmailViaWeb(
-        to: to,
-        subject: subject,
-        body: body,
-        attachment: attachment,
-        attachmentName: attachmentName,
-      );
-    }
-
-    // For non-web platforms, use SMTP
-    File? tempFile;
-
-    try {
-      print('Starting email sending process...');
-      print('To: $to');
-      print('Subject: $subject');
-      print('Attachment size: ${attachment.length} bytes');
-
-      // Create temporary file for attachment using safe directory method
-      final tempDir = await _getSafeTemporaryDirectory();
-      tempFile = File('${tempDir.path}/$attachmentName');
-      await tempFile.writeAsBytes(attachment);
-
-      // Verify file was created
-      if (!await tempFile.exists()) {
-        throw Exception('Failed to create temporary attachment file');
-      }
-
-      print('Temporary attachment created: ${tempFile.path}');
-
-      // Create SMTP server configuration for Outlook
-      final smtpServer = SmtpServer(
-        _outlookSmtpServer,
-        port: _outlookSmtpPort,
-        ssl: false,
-        username: _outlookSenderEmail,
-        password: _outlookSenderPassword,
-      );
-
-      // Create email message
-      final message = Message()
-        ..from = Address(_outlookSenderEmail, 'MIIT Registrar Office')
-        ..recipients.add(to)
-        ..subject = subject
-        ..text = body;
-
-      // Add attachment using FileAttachment
-      message.attachments.add(FileAttachment(tempFile));
-
-      // Send the email with timeout
-      print('Connecting to SMTP server $_outlookSmtpServer:$_outlookSmtpPort...');
-      final sendReport = await send(message, smtpServer).timeout(
-        const Duration(seconds: 30),
-        onTimeout: () {
-          throw Exception('SMTP connection timeout after 30 seconds');
-        },
-      );
-
-      print('Email sent successfully!');
-      print('Send report: ${sendReport.toString()}');
-
-      return true;
-    } catch (e) {
-      print('Error sending email: $e');
-
-      // Check for specific authentication errors
-      if (e.toString().contains('535') || e.toString().contains('Authentication')) {
-        throw Exception('Email authentication failed. Please check:\n1. Email address: $_outlookSenderEmail\n2. Password is correct\n3. Less secure app access is enabled for this Outlook account');
-      }
-
-      // Try alternative SMTP server if primary fails
-      try {
-        print('Trying alternative SMTP server smtp-mail.outlook.com...');
-        final altSmtpServer = SmtpServer(
-          'smtp-mail.outlook.com',
-          port: 587,
-          ssl: false,
-          username: _outlookSenderEmail,
-          password: _outlookSenderPassword,
-        );
-
-        // Recreate message for alt server
-        final message = Message()
-          ..from = Address(_outlookSenderEmail, 'MIIT Registrar Office')
-          ..recipients.add(to)
-          ..subject = subject
-          ..text = body;
-
-        // Recreate temp file if needed
-        if (tempFile == null || !await tempFile!.exists()) {
-          final tempDir = await _getSafeTemporaryDirectory();
-          tempFile = File('${tempDir.path}/$attachmentName');
-          await tempFile!.writeAsBytes(attachment);
-        }
-
-        message.attachments.add(FileAttachment(tempFile!));
-
-        final sendReport = await send(message, altSmtpServer);
-        print('Email sent via alternative server!');
-        print('Send report: ${sendReport.toString()}');
-        return true;
-      } catch (altError) {
-        print('Alternative server also failed: $altError');
-
-        if (altError.toString().contains('535') || altError.toString().contains('Authentication')) {
-          throw Exception('Authentication failed on both SMTP servers. Please verify your Outlook email credentials.');
-        }
-
-        throw Exception('Failed to send email: ${altError.toString()}');
-      }
-    } finally {
-      // Clean up temporary file
-      if (tempFile != null) {
-        try {
-          if (await tempFile!.exists()) {
-            await tempFile!.delete();
-            print('Temporary file cleaned up');
-          }
-        } catch (e) {
-          print('Error cleaning up temp file: $e');
-        }
-      }
-    }
-  }
-
-  Future<void> _sendTranscriptEmail() async {
-    if (_isSendingEmail) return;
-
-    setState(() {
-      _isSendingEmail = true;
+  // Helper method to get semester stats as plain text
+  String _getSemesterStatsText() {
+    final semesterStats = _getSemesterStatsFromFirestore();
+    String result = '';
+    semesterStats.forEach((semester, data) {
+      result += '• $semester: ${data['gpa'].toStringAsFixed(2)}\n';
     });
-
-    try {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Text('Generating and sending transcript...'),
-              ],
-            ),
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
-
-      final pdfBytes = await _generateTranscriptPDF();
-
-      final studentEmail = _getStudentMiitEmail();
-      final emailSubject = 'Official Academic Transcript - ${widget.studentName} (${widget.rollNumber})';
-      final emailBody = _generateEmailBody();
-
-      bool emailSent = await _sendEmailViaOutlook(
-        to: studentEmail,
-        subject: emailSubject,
-        body: emailBody,
-        attachment: pdfBytes,
-        attachmentName: 'MIIT_Transcript_${widget.rollNumber}.pdf',
-      );
-
-      if (emailSent && mounted) {
-        await _updateTranscriptStatus(studentEmail);
-
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '✓ Transcript sent successfully!',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  'Sent to: $studentEmail',
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-
-        if (widget.onTranscriptSent != null) {
-          widget.onTranscriptSent!();
-        }
-      } else if (kIsWeb && mounted) {
-        // On web, email wasn't sent automatically but user was shown options
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please follow the instructions to send the email manually.'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error sending email: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Error sending email',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  e.toString(),
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 8),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSendingEmail = false;
-        });
-      }
-    }
+    return result;
   }
 
-  String _generateEmailBody() {
+  // Plain text email body
+  String _generatePlainTextEmailBody() {
     final overallStats = _calculateOverallStats();
     final semesterStats = _getSemesterStatsFromFirestore();
 
     String semesterDetails = '';
     semesterStats.forEach((semester, data) {
-      semesterDetails += '\n• $semester: ${data['gpa'].toStringAsFixed(2)}';
+      semesterDetails += '• $semester: ${data['gpa'].toStringAsFixed(2)}\n';
     });
 
     return '''
+MYANMAR INSTITUTE OF INFORMATION TECHNOLOGY
+OFFICIAL ACADEMIC TRANSCRIPT
+
 Dear ${widget.studentName},
 
-Please find attached your official academic transcript from the Myanmar Institute of Information Technology.
+Please find attached your official academic transcript.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STUDENT DETAILS
@@ -964,22 +492,217 @@ Date Issued: ${DateFormat('dd MMMM yyyy').format(DateTime.now())}
 ACADEMIC SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 $semesterDetails
-
 Overall CGPA: ${overallStats['cgpa']}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OFFICIAL DOCUMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 This is an official document issued by the Registrar's Office.
-For verification purposes, please contact registrar@miit.edu.mm
-
-This transcript has been digitally signed and verified.
+For verification, contact: registrar@miit.edu.mm
 
 Best regards,
 Registrar's Office
 Myanmar Institute of Information Technology
-    ''';
+''';
   }
+
+  // MAIN EMAIL SENDING METHOD - PDF ATTACHED AUTOMATICALLY ON MOBILE
+// MAIN EMAIL SENDING METHOD - Student email goes to ACTUAL "To" field
+// MAIN EMAIL SENDING METHOD - PDF AUTO-ATTACHED ON MOBILE
+  Future<void> _sendTranscriptEmail(String studentEmail) async {
+    if (_isSendingEmail) return;
+
+    setState(() {
+      _isSendingEmail = true;
+    });
+
+    try {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 10),
+                Text('Generating PDF...'),
+              ],
+            ),
+          ),
+        );
+      }
+
+      // Generate PDF
+      final pdfBytes = await _generateTranscriptPDF();
+      final fileName = 'MIIT_Transcript_${widget.rollNumber}_${DateFormat('yyyyMMdd').format(DateTime.now())}.pdf';
+      final emailSubject = 'Official Academic Transcript - ${widget.studentName} (${widget.rollNumber})';
+      final emailBody = _generatePlainTextEmailBody();
+
+      if (kIsWeb) {
+        // WEB: Download PDF, then open email with pre-filled recipient
+        await _savePdfForWeb(pdfBytes);
+
+        final encodedSubject = Uri.encodeComponent(emailSubject);
+        final encodedBody = Uri.encodeComponent('''
+$emailBody
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📎 PDF has been downloaded. Please attach it from your Downloads folder.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+''');
+        final mailtoUrl = 'mailto:$studentEmail?subject=$encodedSubject&body=$encodedBody';
+        await launchUrl(Uri.parse(mailtoUrl), mode: LaunchMode.externalApplication);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email opened! Student email in "To" field. Attach the PDF manually.'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+      else {
+        // MOBILE (Android & iOS): Save PDF to temp and share - PDF ATTACHED AUTOMATICALLY!
+        final tempDir = await getTemporaryDirectory();
+        final pdfFile = File('${tempDir.path}/$fileName');
+        await pdfFile.writeAsBytes(pdfBytes);
+
+        // Create email content - student email is in the body since "To" field can't be pre-filled
+        final emailContent = '''
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 TO: $studentEmail
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+$emailBody
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📎 The official transcript PDF is ATTACHED to this email.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+''';
+
+        // Share the file - PDF will be attached automatically when user selects email app
+        await Share.shareXFiles(
+          [XFile(pdfFile.path)],
+          text: emailContent,
+          subject: emailSubject,
+        );
+
+        // Clean up temp file after 10 seconds
+        Future.delayed(const Duration(seconds: 10), () async {
+          try {
+            if (await pdfFile.exists()) {
+              await pdfFile.delete();
+            }
+          } catch (e) {
+            print('Error deleting temp file: $e');
+          }
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ PDF Ready! Select your email app. PDF is attached automatically.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      }
+
+      // Update Firestore status
+      await _updateTranscriptStatus(studentEmail);
+
+      if (widget.onTranscriptSent != null) {
+        widget.onTranscriptSent!();
+      }
+
+    } catch (e) {
+      print('Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingEmail = false;
+        });
+      }
+    }
+  }  /* String _generateEmailBody() {
+    final overallStats = _calculateOverallStats();
+    final semesterStats = _getSemesterStatsFromFirestore();
+
+    String semesterDetails = '';
+    semesterStats.forEach((semester, data) {
+      semesterDetails += '<li>$semester: <strong>${data['gpa'].toStringAsFixed(2)}</strong></li>';
+    });
+
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="text-align: center; border-bottom: 3px solid #003366; padding-bottom: 15px; margin-bottom: 20px;">
+      <h2 style="color: #003366; margin: 0;">MYANMAR INSTITUTE OF INFORMATION TECHNOLOGY</h2>
+      <p style="color: #666; margin: 5px 0 0;">Official Academic Transcript</p>
+    </div>
+
+    <p>Dear <strong>${widget.studentName}</strong>,</p>
+
+    <p>Please find attached your official academic transcript from the Myanmar Institute of Information Technology.</p>
+
+    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="color: #003366; margin-top: 0;">Student Details</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr><td style="padding: 5px 0;"><strong>Name:</strong></td>
+        <td>${widget.studentName}</td>
+        </tr>
+        <tr><td style="padding: 5px 0;"><strong>Roll Number:</strong></td>
+        <td>${widget.rollNumber}</td>
+        </tr>
+        <tr><td style="padding: 5px 0;"><strong>Program:</strong></td>
+        <td>${_transcriptData?['classSubject'] ?? 'Information Technology'}</td>
+        </tr>
+        <tr><td style="padding: 5px 0;"><strong>Date Issued:</strong></td>
+        <td>${DateFormat('dd MMMM yyyy').format(DateTime.now())}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background-color: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="color: #003366; margin-top: 0;">Academic Summary</h3>
+      <ul style="margin: 0; padding-left: 20px;">
+        $semesterDetails
+      </ul>
+      <p style="margin-top: 15px;"><strong>Overall CGPA:</strong> ${overallStats['cgpa']}</p>
+    </div>
+
+    <div style="margin: 20px 0; padding: 10px; border-left: 4px solid #003366; background-color: #f9f9f9;">
+      <p style="margin: 0; font-style: italic;">This is an official document issued by the Registrar's Office. For verification purposes, please contact registrar@miit.edu.mm</p>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #ddd; padding-top: 15px;">
+      <p>Myanmar Institute of Information Technology<br>This transcript has been digitally signed and verified.</p>
+    </div>
+  </div>
+</body>
+</html>
+    ''';
+  } */
 
   Future<Uint8List> _generateTranscriptPDF() async {
     final pdf = pw.Document();
@@ -1081,7 +804,6 @@ Myanmar Institute of Information Technology
                               pw.SizedBox(height: 8),
                               _buildPdfInfoRow('Academic Year:', _transcriptData?['academicYear'] ?? 'N/A'),
                               pw.SizedBox(height: 8),
-                              _buildPdfInfoRow('Date Issued:', DateFormat('dd MMMM yyyy').format(DateTime.now())),
                             ],
                           ),
                         ),
@@ -1310,7 +1032,7 @@ Myanmar Institute of Information Technology
   }
 
   Future<void> _showEmailDialog() async {
-    _emailController.text = _getStudentMiitEmail();
+    _emailController.text = widget.studentEmail ?? _manualStudentEmail;
 
     return showDialog(
       context: context,
@@ -1321,7 +1043,7 @@ Myanmar Institute of Information Technology
             children: [
               const Icon(Icons.email, color: Colors.blue),
               const SizedBox(width: 10),
-              const Text('Send Transcript to Student'),
+              const Text('Send Transcript'),
             ],
           ),
           content: SingleChildScrollView(
@@ -1329,98 +1051,99 @@ Myanmar Institute of Information Technology
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  kIsWeb
-                      ? 'On web, you will need to download the PDF and send it manually.\n\n'
-                      : 'This will send the transcript to the student\'s MIIT email:',
-                  style: const TextStyle(fontSize: 14),
+                const Text('Enter student email address:', style: TextStyle(fontSize: 14)),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: _emailController,
+                  decoration: InputDecoration(
+                    labelText: 'Student Email Address',
+                    prefixIcon: const Icon(Icons.email),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    hintText: 'student@example.com',
+                  ),
+                  keyboardType: TextInputType.emailAddress,
+                  autofocus: true,
                 ),
                 const SizedBox(height: 15),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue[50],
+                    color: Colors.green[50],
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.blue),
+                    border: Border.all(color: Colors.green[200]!),
                   ),
-                  child: Row(
+                  child: const Column(
                     children: [
-                      const Icon(Icons.mark_email_read, color: Colors.blue),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Student Email:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'How it works:',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                             ),
-                            Text(
-                              _getStudentMiitEmail(),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blue[800],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '1. PDF will be generated\n'
+                            '2. On mobile: PDF attaches automatically\n'
+                            '3. On web: Download PDF then attach manually\n'
+                            '4. Student email is pre-filled in message\n'
+                            '5. Select email app and tap Send!',
+                        style: TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 15),
-                Text(
-                  kIsWeb
-                      ? 'The transcript PDF will be downloaded and you can attach it to your email.'
-                      : 'The transcript will be attached as a PDF file.',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                Text(
-                  kIsWeb ? '' : 'This may take a few moments...',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                if (_isSendingEmail)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 15),
-                    child: Column(
-                      children: [
-                        LinearProgressIndicator(),
-                        SizedBox(height: 10),
-                        Text(
-                          'Sending email...',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
+                if (_isSendingEmail) ...[
+                  const SizedBox(height: 15),
+                  const LinearProgressIndicator(),
+                  const SizedBox(height: 10),
+                  const Center(child: Text('Generating PDF...', style: TextStyle(fontSize: 12))),
+                ],
               ],
             ),
           ),
           actions: [
             TextButton(
-              onPressed: _isSendingEmail ? null : () => Navigator.of(context).pop(),
+              onPressed: _isSendingEmail ? null : () => Navigator.pop(context),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
               onPressed: _isSendingEmail ? null : () async {
-                Navigator.of(context).pop();
-                await _sendTranscriptEmail();
+                final email = _emailController.text.trim();
+                if (email.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter an email address'), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+                if (!email.contains('@') || !email.contains('.')) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter a valid email address'), backgroundColor: Colors.red),
+                  );
+                  return;
+                }
+                _manualStudentEmail = email;
+                Navigator.pop(context);
+                await _sendTranscriptEmail(email);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
               ),
-              child: const Text('Send to Student'),
+              child: const Text('Generate & Share'),
             ),
           ],
         );
       },
     );
   }
-
+// MAIN EMAIL SENDING METHOD - Student email goes to ACTUAL "To" field
+// MAIN EMAIL SENDING METHOD - Student email goes to ACTUAL "To" field
   Future<void> _updateTranscriptStatus(String recipientEmail) async {
     try {
       await _firestore
@@ -1434,9 +1157,10 @@ Myanmar Institute of Information Technology
         'isSent': true,
         'lastSentDate': FieldValue.serverTimestamp(),
         'emailSentCount': FieldValue.increment(1),
+        'manualEmailUsed': recipientEmail,
       });
 
-      print('Transcript status updated in Firestore');
+      print('Transcript status updated in Firestore with email: $recipientEmail');
     } catch (e) {
       print('Error updating transcript status: $e');
     }
@@ -1452,7 +1176,6 @@ Myanmar Institute of Information Technology
 
     final semesterStats = _getSemesterStatsFromFirestore();
     final overallStats = _calculateOverallStats();
-    final studentEmail = _getStudentMiitEmail();
 
     final isMobile = MediaQuery.of(context).size.width < 768;
     final isTablet = MediaQuery.of(context).size.width >= 768 &&
@@ -1462,7 +1185,7 @@ Myanmar Institute of Information Technology
       appBar: AppBar(
         title: const Text('Student Transcript'),
         actions: [
-          if (_transcriptData?['isSent'] == true)
+          if (_transcriptData?['isSent'] == true && _manualStudentEmail.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               margin: const EdgeInsets.only(right: 8, top: 12, bottom: 12),
@@ -1476,21 +1199,18 @@ Myanmar Institute of Information Technology
                   const Icon(Icons.check_circle, color: Colors.green, size: 14),
                   const SizedBox(width: 4),
                   Text(
-                    'Sent to: $studentEmail',
+                    'Sent to: $_manualStudentEmail',
                     style: TextStyle(
                       color: Colors.green,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-          IconButton(
-            icon: const Icon(Icons.save_alt),
-            onPressed: _isGeneratingPDF ? null : _saveTranscriptPDF,
-            tooltip: 'Save PDF',
-          ),
+          // Only Send Email button - Save button REMOVED
           IconButton(
             icon: _isSendingEmail
                 ? const SizedBox(
@@ -1500,7 +1220,7 @@ Myanmar Institute of Information Technology
             )
                 : const Icon(Icons.send),
             onPressed: _isSendingEmail ? null : _showEmailDialog,
-            tooltip: 'Send to Student Email',
+            tooltip: 'Send Transcript to Student',
           ),
         ],
       ),
@@ -1509,7 +1229,6 @@ Myanmar Institute of Information Technology
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Platform Notice for Web
             if (kIsWeb)
               Card(
                 color: Colors.orange[50],
@@ -1521,7 +1240,7 @@ Myanmar Institute of Information Technology
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
-                          'Web Version Notice: Email sending is not available. Use the "Send to Student" button to download PDF and open email client.',
+                          'Web Version: PDF will download, then email opens. Attach the PDF manually.',
                           style: TextStyle(fontSize: 12),
                         ),
                       ),
@@ -1532,45 +1251,61 @@ Myanmar Institute of Information Technology
 
             if (kIsWeb) const SizedBox(height: 16),
 
-            // Student Email Info Card
             Card(
               color: Colors.blue[50],
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.email, color: Colors.blue),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Student MIIT Email:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
+                    const Row(
+                      children: [
+                        Icon(Icons.email, color: Colors.blue),
+                        SizedBox(width: 10),
+                        Text(
+                          'Student Email:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
                           ),
-                          Text(
-                            studentEmail,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.copy, size: 20),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: studentEmail));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Email copied to clipboard')),
-                        );
-                      },
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _manualStudentEmail.isNotEmpty
+                                ? _manualStudentEmail
+                                : 'Not set - enter when sending',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: _manualStudentEmail.isNotEmpty
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: _manualStudentEmail.isNotEmpty
+                                  ? Colors.blue[800]
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 20),
+                          onPressed: _showEmailDialog,
+                          tooltip: 'Set/Edit Email',
+                        ),
+                        if (_manualStudentEmail.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.copy, size: 20),
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: _manualStudentEmail));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Email copied to clipboard')),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -1578,7 +1313,7 @@ Myanmar Institute of Information Technology
             ),
             const SizedBox(height: 16),
 
-            // Student Information
+            // Student Information Card
             Card(
               elevation: 3,
               child: Container(
@@ -1604,13 +1339,7 @@ Myanmar Institute of Information Technology
                               color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text(
-                              'Last sent: ${DateFormat('dd/MM/yyyy').format((_transcriptData?['sentDate'] as Timestamp).toDate())}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.blue[800],
-                              ),
-                            ),
+
                           ),
                       ],
                     ),
@@ -1623,7 +1352,6 @@ Myanmar Institute of Information Technology
                           _buildInfoRow('Student ID:', widget.rollNumber, isMobile),
                           _buildInfoRow('Date of Birth:', _studentData?['sdob'] ?? 'N/A', isMobile),
                           _buildInfoRow('NRC:', _transcriptData?['nrc'] ?? 'N/A', isMobile),
-
                           const SizedBox(height: 10),
                           Container(
                             width: double.infinity,
@@ -1631,7 +1359,6 @@ Myanmar Institute of Information Technology
                             color: Colors.grey[300],
                           ),
                           const SizedBox(height: 10),
-
                           _buildInfoRow('Program:', _transcriptData?['classSubject'] ?? 'Information Technology', isMobile),
                           _buildInfoRow('Major:', 'Computer Science & Engineering', isMobile),
                           _buildInfoRow('Academic Year:', _transcriptData?['academicYear'] ?? 'N/A', isMobile),
@@ -1653,14 +1380,12 @@ Myanmar Institute of Information Technology
                               ],
                             ),
                           ),
-
                           Container(
                             width: 1,
                             height: 140,
                             color: Colors.grey[300],
                             margin: EdgeInsets.symmetric(horizontal: isTablet ? 10 : 30),
                           ),
-
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1680,7 +1405,6 @@ Myanmar Institute of Information Technology
             ),
             const SizedBox(height: 20),
 
-            // Semester Summary Card
             Card(
               elevation: 3,
               child: Padding(
@@ -1775,7 +1499,6 @@ Myanmar Institute of Information Technology
             ),
             const SizedBox(height: 20),
 
-            // Overall Statistics and Grading System
             if (isMobile)
               Column(
                 children: [
@@ -1846,7 +1569,6 @@ Myanmar Institute of Information Technology
                     ),
                   ),
                   const SizedBox(height: 10),
-
                   Card(
                     elevation: 3,
                     child: Padding(
@@ -1955,7 +1677,6 @@ Myanmar Institute of Information Technology
                     ),
                   ),
                   const SizedBox(width: 15),
-
                   Expanded(
                     child: Card(
                       elevation: 3,
@@ -1995,57 +1716,29 @@ Myanmar Institute of Information Technology
               ),
             const SizedBox(height: 30),
 
-            // Action Buttons
+            // Only Send Email button - Save button REMOVED
             Center(
-              child: Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _isGeneratingPDF ? null : _saveTranscriptPDF,
-                    icon: _isGeneratingPDF
-                        ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                        : const Icon(Icons.save_alt),
-                    label: Text(_isGeneratingPDF ? 'Saving...' : 'Save PDF'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 20 : 40,
-                        vertical: isMobile ? 12 : 15,
-                      ),
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                    ),
+              child: ElevatedButton.icon(
+                onPressed: _isSendingEmail ? null : _showEmailDialog,
+                icon: _isSendingEmail
+                    ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                   ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _isSendingEmail ? null : _showEmailDialog,
-                    icon: _isSendingEmail
-                        ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                        : const Icon(Icons.send),
-                    label: Text(_isSendingEmail ? 'Sending...' : 'Send to Student Email'),
-                    style: ElevatedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 20 : 40,
-                        vertical: isMobile ? 12 : 15,
-                      ),
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
+                )
+                    : const Icon(Icons.send),
+                label: Text(_isSendingEmail ? 'Preparing...' : 'Send Transcript'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isMobile ? 20 : 40,
+                    vertical: isMobile ? 12 : 15,
                   ),
-                  const SizedBox(height: 10),
-                ],
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ),
             const SizedBox(height: 20),
