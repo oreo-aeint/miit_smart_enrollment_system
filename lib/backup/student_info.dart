@@ -1,14 +1,22 @@
 import 'dart:convert';
-
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Student model class with combined information
 class Student {
   // Basic Information
+
+  String? currentStudentPhotoUrl;
+  String? currentIdFrontUrl;
+  String? currentIdBackUrl;
   String? idFrontUrl;
   String? idBackUrl;
   String? studentPhotoUrl;
@@ -80,6 +88,7 @@ class Student {
 
   Student({
     // Basic Information (required)
+
     this.idFrontUrl,
     this.idBackUrl,
     this.studentPhotoUrl,
@@ -883,6 +892,7 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
   }
 
   // Build individual major column
+  // Build individual major column - FIXED VERSION
   Widget _buildMajorColumn(String major, List<Student> students, Color color) {
     return Card(
       elevation: 3,
@@ -938,23 +948,22 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
             ),
           ),
 
-          // Students List
-          students.isEmpty
-              ? Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Center(
-              child: Text(
-                'No $major students found',
-                style: TextStyle(
-                  color: Colors.grey[600]!,
-                  fontStyle: FontStyle.italic,
+          // Students List - FIXED: Use Flexible with constraints instead of fixed height
+          Flexible(
+            child: students.isEmpty
+                ? Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Text(
+                  'No $major students found',
+                  style: TextStyle(
+                    color: Colors.grey[600]!,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
-            ),
-          )
-              : SizedBox(
-            height: 400, // Fixed height for scrollable area
-            child: ListView.builder(
+            )
+                : ListView.builder(
               shrinkWrap: true,
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: students.length,
@@ -1194,6 +1203,652 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
 
   void _editStudent(Student student) {
     _showStudentForm(student: student);
+  }
+
+  Future<Map<String, String?>> fetchStudentPhotoUrls(String rollNo) async {
+    try {
+      final response = await Supabase.instance.client
+          .from('student_photos')
+          .select('student_photo_url, id_front_url, id_back_url')
+          .eq('roll_no', rollNo)
+          .maybeSingle();
+
+      if (response == null) {
+        return {
+          'student_photo_url': null,
+          'id_front_url': null,
+          'id_back_url': null,
+        };
+      }
+
+      return {
+        'student_photo_url': response['student_photo_url'],
+        'id_front_url': response['id_front_url'],
+        'id_back_url': response['id_back_url'],
+      };
+    } catch (e) {
+      print('Error fetching photo URLs: $e');
+      return {
+        'student_photo_url': null,
+        'id_front_url': null,
+        'id_back_url': null,
+      };
+    }
+  }
+  void _showStudentForm({Student? student}) {
+    final isEditing = student != null;
+
+    // Basic Information Controllers
+    final nameController = TextEditingController(text: student?.name ?? '');
+    final rollNoController = TextEditingController(text: student?.rollNo ?? '');
+    final academicYearController = TextEditingController(text: student?.academicYear ?? '');
+    final batchController = TextEditingController(text: student?.batch ?? '');
+    final majorController = TextEditingController(text: student?.major ?? '');
+
+    // Personal Information Controllers
+    final eduMailController = TextEditingController(text: student?.eduMail ?? '');
+    final courseYearController = TextEditingController(text: student?.courseYear ?? '');
+    final regNoController = TextEditingController(text: student?.registrationNumber ?? '');
+    final dobController = TextEditingController(text: student?.dateOfBirth ?? '');
+    final genderController = TextEditingController(text: student?.gender ?? '');
+    final religionController = TextEditingController(text: student?.religion ?? '');
+
+    // NRC Controllers
+    final nrcDivisionController = TextEditingController(text: student?.nrcDivision ?? '');
+    final nrcTownshipController = TextEditingController(text: student?.nrcTownship ?? '');
+    final nrcTypeController = TextEditingController(text: student?.nrcType ?? 'N');
+    final nrcNumberController = TextEditingController(text: student?.nrcNumber ?? '');
+    final contactController = TextEditingController(text: student?.contactNumber ?? '');
+    final addressController = TextEditingController(text: student?.address ?? '');
+
+    // Father Information Controllers
+    final fatherNameController = TextEditingController(text: student?.fatherName ?? '');
+    final fatherDobController = TextEditingController(text: student?.fatherDateOfBirth ?? '');
+    final fatherReligionController = TextEditingController(text: student?.fatherReligion ?? '');
+    final fatherNrcDivisionController = TextEditingController(text: student?.fatherNrcDivision ?? '');
+    final fatherNrcTownshipController = TextEditingController(text: student?.fatherNrcTownship ?? '');
+    final fatherNrcTypeController = TextEditingController(text: student?.fatherNrcType ?? 'N');
+    final fatherNrcNumberController = TextEditingController(text: student?.fatherNrcNumber ?? '');
+    final fatherContactController = TextEditingController(text: student?.fatherContactNumber ?? '');
+    final fatherAddressController = TextEditingController(text: student?.fatherAddress ?? '');
+
+    // Mother Information Controllers
+    final motherNameController = TextEditingController(text: student?.motherName ?? '');
+    final motherDobController = TextEditingController(text: student?.motherDateOfBirth ?? '');
+    final motherReligionController = TextEditingController(text: student?.motherReligion ?? '');
+    final motherNrcDivisionController = TextEditingController(text: student?.motherNrcDivision ?? '');
+    final motherNrcTownshipController = TextEditingController(text: student?.motherNrcTownship ?? '');
+    final motherNrcTypeController = TextEditingController(text: student?.motherNrcType ?? 'N');
+    final motherNrcNumberController = TextEditingController(text: student?.motherNrcNumber ?? '');
+    final motherContactController = TextEditingController(text: student?.motherContactNumber ?? '');
+    final motherAddressController = TextEditingController(text: student?.motherAddress ?? '');
+
+    // Photo state variables
+    // Current URLs from table
+    String? currentStudentPhotoUrl;
+    String? currentIdFrontUrl;
+    String? currentIdBackUrl;
+
+    // New files to upload (if changed)
+    File? newStudentPhotoFile;
+    Uint8List? newStudentPhotoWebBytes;
+    File? newIdFrontFile;
+    Uint8List? newIdFrontWebBytes;
+    File? newIdBackFile;
+    Uint8List? newIdBackWebBytes;
+
+    // Loading state
+    bool isLoadingPhotos = true;
+
+    EnrollmentStatus enrollmentStatus = student?.enrollmentStatus ?? EnrollmentStatus.pending;
+    StudentStatus studentStatus = student?.studentStatus ?? StudentStatus.active;
+
+    // Fetch existing photo URLs if editing
+    if (isEditing) {
+      fetchStudentPhotoUrls(student.rollNo).then((urls) {
+        currentStudentPhotoUrl = urls['student_photo_url'];
+        currentIdFrontUrl = urls['id_front_url'];
+        currentIdBackUrl = urls['id_back_url'];
+        isLoadingPhotos = false;
+        // Note: You'll need to trigger a rebuild - we'll handle this inside the dialog
+      });
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // Load photos if not loaded yet and editing
+            if (isEditing && isLoadingPhotos) {
+              fetchStudentPhotoUrls(student.rollNo).then((urls) {
+                setState(() {
+                  currentStudentPhotoUrl = urls['student_photo_url'];
+                  currentIdFrontUrl = urls['id_front_url'];
+                  currentIdBackUrl = urls['id_back_url'];
+                  isLoadingPhotos = false;
+                });
+              });
+            }
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isMobile ? MediaQuery.of(context).size.width * 0.95 : 600,
+                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            isEditing ? 'Edit Student' : 'Add New Student',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Content
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // ========== PHOTO EDIT SECTION ==========
+                            _buildEditPhotoSection(
+                              currentStudentPhotoUrl: currentStudentPhotoUrl,
+                              currentIdFrontUrl: currentIdFrontUrl,
+                              currentIdBackUrl: currentIdBackUrl,
+                              newStudentPhotoFile: newStudentPhotoFile,
+                              newStudentPhotoWebBytes: newStudentPhotoWebBytes,
+                              newIdFrontFile: newIdFrontFile,
+                              newIdFrontWebBytes: newIdFrontWebBytes,
+                              newIdBackFile: newIdBackFile,
+                              newIdBackWebBytes: newIdBackWebBytes,
+                              onStudentPhotoPicked: (file, webBytes) {
+                                setState(() {
+                                  newStudentPhotoFile = file;
+                                  newStudentPhotoWebBytes = webBytes;
+                                });
+                              },
+                              onIdFrontPicked: (file, webBytes) {
+                                setState(() {
+                                  newIdFrontFile = file;
+                                  newIdFrontWebBytes = webBytes;
+                                });
+                              },
+                              onIdBackPicked: (file, webBytes) {
+                                setState(() {
+                                  newIdBackFile = file;
+                                  newIdBackWebBytes = webBytes;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Student Information section
+                            _buildFormSection('Student Information'),
+                            _buildTextField(nameController, 'Name'),
+                            _buildTextField(rollNoController, 'Roll No'),
+                            _buildTextField(academicYearController, 'Academic Year'),
+                            _buildTextField(batchController, 'Batch'),
+                            _buildTextField(majorController, 'Major'),
+                            _buildTextField(eduMailController, 'Education Email'),
+                            _buildTextField(courseYearController, 'Course Year'),
+                            _buildTextField(regNoController, 'Registration Number'),
+                            _buildTextField(dobController, 'Date of Birth'),
+                            _buildTextField(genderController, 'Gender'),
+                            _buildTextField(religionController, 'Religion'),
+
+                            // Student NRC Components
+                            _buildFormSection('Student NRC'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(nrcDivisionController, 'Division'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildTextField(nrcTownshipController, 'Township'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 1,
+                                  child: _buildTextField(nrcTypeController, 'Type'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildTextField(nrcNumberController, 'Number'),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              'NRC Format: ${nrcDivisionController.text}/${nrcTownshipController.text}(${nrcTypeController.text})${nrcNumberController.text}',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+
+                            _buildTextField(contactController, 'Contact Number'),
+                            _buildTextField(addressController, 'Address', lines: 2),
+
+                            // Father Information
+                            _buildFormSection('Father Information'),
+                            _buildTextField(fatherNameController, 'Father Name'),
+                            _buildTextField(fatherDobController, 'Father Date of Birth'),
+                            _buildTextField(fatherReligionController, 'Father Religion'),
+
+                            // Father NRC Components
+                            _buildFormSection('Father NRC'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(fatherNrcDivisionController, 'Division'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildTextField(fatherNrcTownshipController, 'Township'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 1,
+                                  child: _buildTextField(fatherNrcTypeController, 'Type'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildTextField(fatherNrcNumberController, 'Number'),
+                                ),
+                              ],
+                            ),
+
+                            _buildTextField(fatherContactController, 'Father Contact Number'),
+                            _buildTextField(fatherAddressController, 'Father Address', lines: 2),
+
+                            // Mother Information
+                            _buildFormSection('Mother Information'),
+                            _buildTextField(motherNameController, 'Mother Name'),
+                            _buildTextField(motherDobController, 'Mother Date of Birth'),
+                            _buildTextField(motherReligionController, 'Mother Religion'),
+
+                            // Mother NRC Components
+                            _buildFormSection('Mother NRC'),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildTextField(motherNrcDivisionController, 'Division'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _buildTextField(motherNrcTownshipController, 'Township'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 1,
+                                  child: _buildTextField(motherNrcTypeController, 'Type'),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 2,
+                                  child: _buildTextField(motherNrcNumberController, 'Number'),
+                                ),
+                              ],
+                            ),
+
+                            _buildTextField(motherContactController, 'Mother Contact Number'),
+                            _buildTextField(motherAddressController, 'Mother Address', lines: 2),
+
+                            const SizedBox(height: 16),
+
+                            // Status Selection
+                            isMobile ? Column(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Enrollment Status',
+                                        style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildFormEnrollmentStatusRadio(
+                                          EnrollmentStatus.pending,
+                                          enrollmentStatus,
+                                              (status) {
+                                            setState(() {
+                                              enrollmentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                        _buildFormEnrollmentStatusRadio(
+                                          EnrollmentStatus.enrolled,
+                                          enrollmentStatus,
+                                              (status) {
+                                            setState(() {
+                                              enrollmentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                        _buildFormEnrollmentStatusRadio(
+                                          EnrollmentStatus.rejected,
+                                          enrollmentStatus,
+                                              (status) {
+                                            setState(() {
+                                              enrollmentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Student Status',
+                                        style: TextStyle(fontWeight: FontWeight.bold)),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                      children: [
+                                        _buildFormStudentStatusRadio(
+                                          StudentStatus.active,
+                                          studentStatus,
+                                              (status) {
+                                            setState(() {
+                                              studentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                        _buildFormStudentStatusRadio(
+                                          StudentStatus.suspended,
+                                          studentStatus,
+                                              (status) {
+                                            setState(() {
+                                              studentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                        _buildFormStudentStatusRadio(
+                                          StudentStatus.graduated,
+                                          studentStatus,
+                                              (status) {
+                                            setState(() {
+                                              studentStatus = status;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ) : Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Enrollment Status',
+                                          style: TextStyle(fontWeight: FontWeight.bold)),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                        children: [
+                                          _buildFormEnrollmentStatusRadio(
+                                            EnrollmentStatus.pending,
+                                            enrollmentStatus,
+                                                (status) {
+                                              setState(() {
+                                                enrollmentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                          _buildFormEnrollmentStatusRadio(
+                                            EnrollmentStatus.enrolled,
+                                            enrollmentStatus,
+                                                (status) {
+                                              setState(() {
+                                                enrollmentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                          _buildFormEnrollmentStatusRadio(
+                                            EnrollmentStatus.rejected,
+                                            enrollmentStatus,
+                                                (status) {
+                                              setState(() {
+                                                enrollmentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Student Status',
+                                          style: TextStyle(fontWeight: FontWeight.bold)),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                        children: [
+                                          _buildFormStudentStatusRadio(
+                                            StudentStatus.active,
+                                            studentStatus,
+                                                (status) {
+                                              setState(() {
+                                                studentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                          _buildFormStudentStatusRadio(
+                                            StudentStatus.suspended,
+                                            studentStatus,
+                                                (status) {
+                                              setState(() {
+                                                studentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                          _buildFormStudentStatusRadio(
+                                            StudentStatus.graduated,
+                                            studentStatus,
+                                                (status) {
+                                              setState(() {
+                                                studentStatus = status;
+                                              });
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Footer
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Cancel'),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () async {
+                              // Show loading indicator
+                              setState(() {
+                                isLoadingPhotos = true;
+                              });
+
+                              try {
+                                final rollNo = rollNoController.text;
+
+                                // Upload new photos if any
+                                if (newStudentPhotoFile != null || newStudentPhotoWebBytes != null) {
+                                  final newUrl = await uploadNewPhoto(
+                                      newStudentPhotoFile,
+                                      newStudentPhotoWebBytes,
+                                      rollNo,
+                                      'student_photo'
+                                  );
+                                  if (newUrl != null) {
+                                    currentStudentPhotoUrl = newUrl;
+                                  }
+                                }
+
+                                if (newIdFrontFile != null || newIdFrontWebBytes != null) {
+                                  final newUrl = await uploadNewPhoto(
+                                      newIdFrontFile,
+                                      newIdFrontWebBytes,
+                                      rollNo,
+                                      'id_front'
+                                  );
+                                  if (newUrl != null) {
+                                    currentIdFrontUrl = newUrl;
+                                  }
+                                }
+
+                                if (newIdBackFile != null || newIdBackWebBytes != null) {
+                                  final newUrl = await uploadNewPhoto(
+                                      newIdBackFile,
+                                      newIdBackWebBytes,
+                                      rollNo,
+                                      'id_back'
+                                  );
+                                  if (newUrl != null) {
+                                    currentIdBackUrl = newUrl;
+                                  }
+                                }
+
+                                // Update student info in Firestore
+                                final newStudent = Student(
+                                  id: isEditing ? student!.id : '',
+                                  name: nameController.text,
+                                  rollNo: rollNoController.text,
+                                  academicYear: academicYearController.text,
+                                  batch: batchController.text,
+                                  major: majorController.text,
+                                  enrollmentStatus: enrollmentStatus,
+                                  studentStatus: studentStatus,
+                                  eduMail: eduMailController.text,
+                                  courseYear: courseYearController.text,
+                                  registrationNumber: regNoController.text,
+                                  dateOfBirth: dobController.text,
+                                  gender: genderController.text,
+                                  religion: religionController.text,
+                                  nrcDivision: nrcDivisionController.text,
+                                  nrcTownship: nrcTownshipController.text,
+                                  nrcType: nrcTypeController.text,
+                                  nrcNumber: nrcNumberController.text,
+                                  contactNumber: contactController.text,
+                                  address: addressController.text,
+                                  fatherName: fatherNameController.text,
+                                  fatherDateOfBirth: fatherDobController.text,
+                                  fatherReligion: fatherReligionController.text,
+                                  fatherNrcDivision: fatherNrcDivisionController.text,
+                                  fatherNrcTownship: fatherNrcTownshipController.text,
+                                  fatherNrcType: fatherNrcTypeController.text,
+                                  fatherNrcNumber: fatherNrcNumberController.text,
+                                  fatherContactNumber: fatherContactController.text,
+                                  fatherAddress: fatherAddressController.text,
+                                  motherName: motherNameController.text,
+                                  motherDateOfBirth: motherDobController.text,
+                                  motherReligion: motherReligionController.text,
+                                  motherNrcDivision: motherNrcDivisionController.text,
+                                  motherNrcTownship: motherNrcTownshipController.text,
+                                  motherNrcType: motherNrcTypeController.text,
+                                  motherNrcNumber: motherNrcNumberController.text,
+                                  motherContactNumber: motherContactController.text,
+                                  motherAddress: motherAddressController.text,
+                                );
+
+                                await _saveStudent(newStudent, isUpdating: isEditing);
+
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      isEditing
+                                          ? 'Updated ${nameController.text}'
+                                          : 'Added ${nameController.text}',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+
+                                // Reload students list
+                                _loadStudents();
+
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error updating: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              } finally {
+                                setState(() {
+                                  isLoadingPhotos = false;
+                                });
+                              }
+                            },
+                            child: Text(isEditing ? 'Update' : 'Add'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _viewDetails(Student student) {
@@ -1659,540 +2314,247 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
   }
 
   //Edit Show Form with NRC components
-  void _showStudentForm({Student? student}) {
-    final isEditing = student != null;
+  Future<String?> uploadNewPhoto(File? file, Uint8List? webBytes, String rollNo, String photoType) async {
+    if (file == null && webBytes == null) return null;
 
-    // Basic Information
-    final nameController = TextEditingController(text: student?.name ?? '');
-    final rollNoController = TextEditingController(text: student?.rollNo ?? '');
-    final academicYearController = TextEditingController(text: student?.academicYear ?? '');
-    final batchController = TextEditingController(text: student?.batch ?? '');
-    final majorController = TextEditingController(text: student?.major ?? '');
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = '${rollNo}_${photoType}_$timestamp.jpg';
+      final path = 'uploads/$fileName';
 
-    // Personal Information
-    final eduMailController = TextEditingController(text: student?.eduMail ?? '');
-    final courseYearController = TextEditingController(text: student?.courseYear ?? '');
-    final regNoController = TextEditingController(text: student?.registrationNumber ?? '');
-    final dobController = TextEditingController(text: student?.dateOfBirth ?? '');
-    final genderController = TextEditingController(text: student?.gender ?? '');
-    final religionController = TextEditingController(text: student?.religion ?? '');
+      // Upload to storage
+      if (kIsWeb) {
+        if (webBytes != null) {
+          await Supabase.instance.client.storage
+              .from('student_photos')
+              .uploadBinary(path, webBytes, fileOptions: FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ));
+        }
+      } else {
+        if (file != null) {
+          await Supabase.instance.client.storage
+              .from('student_photos')
+              .upload(path, file, fileOptions: FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
+          ));
+        }
+      }
 
-    // Student NRC Components
-    final nrcDivisionController = TextEditingController(text: student?.nrcDivision ?? '');
-    final nrcTownshipController = TextEditingController(text: student?.nrcTownship ?? '');
-    final nrcTypeController = TextEditingController(text: student?.nrcType ?? 'N');
-    final nrcNumberController = TextEditingController(text: student?.nrcNumber ?? '');
+      // Get public URL
+      final imageUrl = Supabase.instance.client.storage
+          .from('student_photos')
+          .getPublicUrl(path);
 
-    final contactController = TextEditingController(text: student?.contactNumber ?? '');
-    final addressController = TextEditingController(text: student?.address ?? '');
+      // Update table
+      Map<String, dynamic> updateData = {
+        'roll_no': rollNo,
+        'updated_at': DateTime.now().toIso8601String(),
+      };
 
-    // Father Information
-    final fatherNameController = TextEditingController(text: student?.fatherName ?? '');
-    final fatherDobController = TextEditingController(text: student?.fatherDateOfBirth ?? '');
-    final fatherReligionController = TextEditingController(text: student?.fatherReligion ?? '');
+      if (photoType == 'student_photo') {
+        updateData['student_photo_url'] = imageUrl;
+      } else if (photoType == 'id_front') {
+        updateData['id_front_url'] = imageUrl;
+      } else if (photoType == 'id_back') {
+        updateData['id_back_url'] = imageUrl;
+      }
 
-    // Father NRC Components
-    final fatherNrcDivisionController = TextEditingController(text: student?.fatherNrcDivision ?? '');
-    final fatherNrcTownshipController = TextEditingController(text: student?.fatherNrcTownship ?? '');
-    final fatherNrcTypeController = TextEditingController(text: student?.fatherNrcType ?? 'N');
-    final fatherNrcNumberController = TextEditingController(text: student?.fatherNrcNumber ?? '');
+      await Supabase.instance.client
+          .from('student_photos')
+          .upsert(updateData);
 
-    final fatherContactController = TextEditingController(text: student?.fatherContactNumber ?? '');
-    final fatherAddressController = TextEditingController(text: student?.fatherAddress ?? '');
+      print('Successfully uploaded and saved $photoType for roll_no: $rollNo');
+      return imageUrl;
 
-    // Mother Information
-    final motherNameController = TextEditingController(text: student?.motherName ?? '');
-    final motherDobController = TextEditingController(text: student?.motherDateOfBirth ?? '');
-    final motherReligionController = TextEditingController(text: student?.motherReligion ?? '');
+    } catch (e) {
+      print('Error uploading photo: $e');
+      return null;
+    }
+  }
+  Widget _buildEditPhotoSection({
+    required String? currentStudentPhotoUrl,
+    required String? currentIdFrontUrl,
+    required String? currentIdBackUrl,
+    required File? newStudentPhotoFile,
+    required Uint8List? newStudentPhotoWebBytes,
+    required File? newIdFrontFile,
+    required Uint8List? newIdFrontWebBytes,
+    required File? newIdBackFile,
+    required Uint8List? newIdBackWebBytes,
+    required Function(File?, Uint8List?) onStudentPhotoPicked,
+    required Function(File?, Uint8List?) onIdFrontPicked,
+    required Function(File?, Uint8List?) onIdBackPicked,
+  }) {
+    final ImagePicker picker = ImagePicker();
 
-    // Mother NRC Components
-    final motherNrcDivisionController = TextEditingController(text: student?.motherNrcDivision ?? '');
-    final motherNrcTownshipController = TextEditingController(text: student?.motherNrcTownship ?? '');
-    final motherNrcTypeController = TextEditingController(text: student?.motherNrcType ?? 'N');
-    final motherNrcNumberController = TextEditingController(text: student?.motherNrcNumber ?? '');
+    Future<void> pickImage(Function(File?, Uint8List?) onPickedCallback) async {
+      try {
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1200,
+          maxHeight: 1200,
+          imageQuality: 85,
+        );
 
-    final motherContactController = TextEditingController(text: student?.motherContactNumber ?? '');
-    final motherAddressController = TextEditingController(text: student?.motherAddress ?? '');
+        if (image != null) {
+          if (kIsWeb) {
+            final bytes = await image.readAsBytes();
+            onPickedCallback(null, bytes);
+          } else {
+            onPickedCallback(File(image.path), null);
+          }
+        }
+      } catch (e) {
+        print('Error picking image: $e');
+      }
+    }
 
-    // Photo state variables
-    String? studentPhoto = student?.studentPhoto;
-    String? idCardFront = student?.idCardFront;
-    String? idCardBack = student?.idCardBack;
+    Widget buildPhotoPreview(
+        String title,
+        String? currentUrl,
+        File? newFile,
+        Uint8List? newWebBytes,
+        Function(File?, Uint8List?) onPickedCallback
+        ) {
+      // Determine what to show
+      Widget previewWidget;
 
-    EnrollmentStatus enrollmentStatus = student?.enrollmentStatus ?? EnrollmentStatus.pending;
-    StudentStatus studentStatus = student?.studentStatus ?? StudentStatus.active;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isMobile ? MediaQuery.of(context).size.width * 0.95 : 600,
-                  maxHeight: MediaQuery.of(context).size.height * 0.9,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(12),
-                          topRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            isEditing ? 'Edit Student' : 'Add New Student',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // ========== PHOTO UPLOAD SECTION ==========
-                            _buildFormPhotoUploadSection(
-                              studentPhoto: studentPhoto,
-                              idCardFront: idCardFront,
-                              idCardBack: idCardBack,
-                              onStudentPhotoChanged: (newPhoto) {
-                                setState(() {
-                                  studentPhoto = newPhoto;
-                                });
-                              },
-                              onIdCardFrontChanged: (newPhoto) {
-                                setState(() {
-                                  idCardFront = newPhoto;
-                                });
-                              },
-                              onIdCardBackChanged: (newPhoto) {
-                                setState(() {
-                                  idCardBack = newPhoto;
-                                });
-                              },
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Student Information section
-                            _buildFormSection('Student Information'),
-                            _buildTextField(nameController, 'Name'),
-                            _buildTextField(rollNoController, 'Roll No'),
-                            _buildTextField(academicYearController, 'Academic Year'),
-                            _buildTextField(batchController, 'Batch'),
-                            _buildTextField(majorController, 'Major'),
-                            _buildTextField(eduMailController, 'Education Email'),
-                            _buildTextField(courseYearController, 'Course Year'),
-                            _buildTextField(regNoController, 'Registration Number'),
-                            _buildTextField(dobController, 'Date of Birth'),
-                            _buildTextField(genderController, 'Gender'),
-                            _buildTextField(religionController, 'Religion'),
-
-                            // Student NRC Components
-                            _buildFormSection('Student NRC'),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(nrcDivisionController, 'Division'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildTextField(nrcTownshipController, 'Township'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildTextField(nrcTypeController, 'Type'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildTextField(nrcNumberController, 'Number'),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              'NRC Format: ${nrcDivisionController.text}/${nrcTownshipController.text}(${nrcTypeController.text})${nrcNumberController.text}',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-
-                            _buildTextField(contactController, 'Contact Number'),
-                            _buildTextField(addressController, 'Address', lines: 2),
-
-                            // Father Information
-                            _buildFormSection('Father Information'),
-                            _buildTextField(fatherNameController, 'Father Name'),
-                            _buildTextField(fatherDobController, 'Father Date of Birth'),
-                            _buildTextField(fatherReligionController, 'Father Religion'),
-
-                            // Father NRC Components
-                            _buildFormSection('Father NRC'),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(fatherNrcDivisionController, 'Division'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildTextField(fatherNrcTownshipController, 'Township'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildTextField(fatherNrcTypeController, 'Type'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildTextField(fatherNrcNumberController, 'Number'),
-                                ),
-                              ],
-                            ),
-
-                            _buildTextField(fatherContactController, 'Father Contact Number'),
-                            _buildTextField(fatherAddressController, 'Father Address', lines: 2),
-
-                            // Mother Information
-                            _buildFormSection('Mother Information'),
-                            _buildTextField(motherNameController, 'Mother Name'),
-                            _buildTextField(motherDobController, 'Mother Date of Birth'),
-                            _buildTextField(motherReligionController, 'Mother Religion'),
-
-                            // Mother NRC Components
-                            _buildFormSection('Mother NRC'),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildTextField(motherNrcDivisionController, 'Division'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _buildTextField(motherNrcTownshipController, 'Township'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 1,
-                                  child: _buildTextField(motherNrcTypeController, 'Type'),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 2,
-                                  child: _buildTextField(motherNrcNumberController, 'Number'),
-                                ),
-                              ],
-                            ),
-
-                            _buildTextField(motherContactController, 'Mother Contact Number'),
-                            _buildTextField(motherAddressController, 'Mother Address', lines: 2),
-
-                            const SizedBox(height: 16),
-
-                            // Status Selection
-                            isMobile ? Column(
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Enrollment Status',
-                                        style: TextStyle(fontWeight: FontWeight.bold)),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                      children: [
-                                        _buildFormEnrollmentStatusRadio(
-                                          EnrollmentStatus.pending,
-                                          enrollmentStatus,
-                                              (status) {
-                                            setState(() {
-                                              enrollmentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                        _buildFormEnrollmentStatusRadio(
-                                          EnrollmentStatus.enrolled,
-                                          enrollmentStatus,
-                                              (status) {
-                                            setState(() {
-                                              enrollmentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                        _buildFormEnrollmentStatusRadio(
-                                          EnrollmentStatus.rejected,
-                                          enrollmentStatus,
-                                              (status) {
-                                            setState(() {
-                                              enrollmentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 16),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text('Student Status',
-                                        style: TextStyle(fontWeight: FontWeight.bold)),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                      children: [
-                                        _buildFormStudentStatusRadio(
-                                          StudentStatus.active,
-                                          studentStatus,
-                                              (status) {
-                                            setState(() {
-                                              studentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                        _buildFormStudentStatusRadio(
-                                          StudentStatus.suspended,
-                                          studentStatus,
-                                              (status) {
-                                            setState(() {
-                                              studentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                        _buildFormStudentStatusRadio(
-                                          StudentStatus.graduated,
-                                          studentStatus,
-                                              (status) {
-                                            setState(() {
-                                              studentStatus = status;
-                                            });
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ) : Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Enrollment Status',
-                                          style: TextStyle(fontWeight: FontWeight.bold)),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                        children: [
-                                          _buildFormEnrollmentStatusRadio(
-                                            EnrollmentStatus.pending,
-                                            enrollmentStatus,
-                                                (status) {
-                                              setState(() {
-                                                enrollmentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                          _buildFormEnrollmentStatusRadio(
-                                            EnrollmentStatus.enrolled,
-                                            enrollmentStatus,
-                                                (status) {
-                                              setState(() {
-                                                enrollmentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                          _buildFormEnrollmentStatusRadio(
-                                            EnrollmentStatus.rejected,
-                                            enrollmentStatus,
-                                                (status) {
-                                              setState(() {
-                                                enrollmentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Student Status',
-                                          style: TextStyle(fontWeight: FontWeight.bold)),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                        children: [
-                                          _buildFormStudentStatusRadio(
-                                            StudentStatus.active,
-                                            studentStatus,
-                                                (status) {
-                                              setState(() {
-                                                studentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                          _buildFormStudentStatusRadio(
-                                            StudentStatus.suspended,
-                                            studentStatus,
-                                                (status) {
-                                              setState(() {
-                                                studentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                          _buildFormStudentStatusRadio(
-                                            StudentStatus.graduated,
-                                            studentStatus,
-                                                (status) {
-                                              setState(() {
-                                                studentStatus = status;
-                                              });
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Footer
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(12),
-                          bottomRight: Radius.circular(12),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              final newStudent = Student(
-                                // Basic Information
-                                id: isEditing ? student!.id : '',
-                                name: nameController.text,
-                                rollNo: rollNoController.text,
-                                academicYear: academicYearController.text,
-                                batch: batchController.text,
-                                major: majorController.text,
-                                enrollmentStatus: enrollmentStatus,
-                                studentStatus: studentStatus,
-
-                                // Personal Information
-                                eduMail: eduMailController.text,
-                                courseYear: courseYearController.text,
-                                registrationNumber: regNoController.text,
-                                dateOfBirth: dobController.text,
-                                gender: genderController.text,
-                                religion: religionController.text,
-
-                                // Student NRC Components
-                                nrcDivision: nrcDivisionController.text,
-                                nrcTownship: nrcTownshipController.text,
-                                nrcType: nrcTypeController.text,
-                                nrcNumber: nrcNumberController.text,
-
-                                contactNumber: contactController.text,
-                                address: addressController.text,
-
-                                // Father Information
-                                fatherName: fatherNameController.text,
-                                fatherDateOfBirth: fatherDobController.text,
-                                fatherReligion: fatherReligionController.text,
-
-                                // Father NRC Components
-                                fatherNrcDivision: fatherNrcDivisionController.text,
-                                fatherNrcTownship: fatherNrcTownshipController.text,
-                                fatherNrcType: fatherNrcTypeController.text,
-                                fatherNrcNumber: fatherNrcNumberController.text,
-
-                                fatherContactNumber: fatherContactController.text,
-                                fatherAddress: fatherAddressController.text,
-
-                                // Mother Information
-                                motherName: motherNameController.text,
-                                motherDateOfBirth: motherDobController.text,
-                                motherReligion: motherReligionController.text,
-
-                                // Mother NRC Components
-                                motherNrcDivision: motherNrcDivisionController.text,
-                                motherNrcTownship: motherNrcTownshipController.text,
-                                motherNrcType: motherNrcTypeController.text,
-                                motherNrcNumber: motherNrcNumberController.text,
-
-                                motherContactNumber: motherContactController.text,
-                                motherAddress: motherAddressController.text,
-
-                                // Photo fields
-                                studentPhoto: studentPhoto,
-                                idCardFront: idCardFront,
-                                idCardBack: idCardBack,
-                              );
-
-                              _saveStudent(newStudent, isUpdating: isEditing);
-
-                              Navigator.of(context).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    isEditing
-                                        ? 'Updated ${nameController.text}'
-                                        : 'Added ${nameController.text}',
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Text(isEditing ? 'Update' : 'Add'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+      if (newFile != null) {
+        // Show new picked file preview
+        previewWidget = kIsWeb
+            ? Image.network(newFile.path, fit: BoxFit.cover)
+            : Image.file(newFile, fit: BoxFit.cover);
+      } else if (newWebBytes != null) {
+        previewWidget = Image.memory(newWebBytes, fit: BoxFit.cover);
+      } else if (currentUrl != null && currentUrl.isNotEmpty) {
+        // Show existing photo from URL
+        previewWidget = Image.network(
+          currentUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return _buildPhotoPlaceholder('Failed to load');
           },
         );
-      },
+      } else {
+        // Show placeholder
+        previewWidget = _buildPhotoPlaceholder('No photo');
+      }
+
+      return Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+              ),
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ),
+            Container(
+              height: 120,
+              width: double.infinity,
+              color: Colors.grey.shade100,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+                child: previewWidget,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ElevatedButton.icon(
+                onPressed: () => pickImage(onPickedCallback),
+                icon: const Icon(Icons.upload_file, size: 16),
+                label: Text(
+                    (newFile != null || newWebBytes != null || (currentUrl != null && currentUrl.isNotEmpty))
+                        ? 'Change Photo'
+                        : 'Upload Photo'
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.blue,
+                  side: BorderSide(color: Colors.blue.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Student Photos',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.blue.shade800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: [
+              buildPhotoPreview(
+                'Student Photo',
+                currentStudentPhotoUrl,
+                newStudentPhotoFile,
+                newStudentPhotoWebBytes,
+                onStudentPhotoPicked,  // Pass the callback correctly
+              ),
+              const SizedBox(height: 12),
+              buildPhotoPreview(
+                'ID Card (Front)',
+                currentIdFrontUrl,
+                newIdFrontFile,
+                newIdFrontWebBytes,
+                onIdFrontPicked,  // Pass the callback correctly
+              ),
+              const SizedBox(height: 12),
+              buildPhotoPreview(
+                'ID Card (Back)',
+                currentIdBackUrl,
+                newIdBackFile,
+                newIdBackWebBytes,
+                onIdBackPicked,  // Pass the callback correctly
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

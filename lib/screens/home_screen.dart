@@ -7,6 +7,8 @@ import 'package:miit_project/screens/enroll_button_screen.dart';
 import 'admin_login_screen.dart';
 import 'package:miit_project/screens/exam_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:miit_project/screens/admin_drawer.dart';
+import 'my_drawer.dart';
 
 class MIITHomePage extends StatelessWidget {
   const MIITHomePage({super.key});
@@ -222,7 +224,8 @@ class MIITHomePage extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const AdminLoginScreen(),
+                 builder: (_) => const AdminLoginScreen(),
+                    //builder: (_) => const AdminDrawer(),
                 ),
               );
             },
@@ -265,7 +268,7 @@ class MIITHomePage extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Test Connection Button
-          ElevatedButton(
+         /* ElevatedButton(
             onPressed: () async {
               try {
                 final result = await Supabase.instance.client
@@ -293,7 +296,7 @@ class MIITHomePage extends StatelessWidget {
               'Test Supabase Connection',
               style: TextStyle(fontSize: screenWidth * 0.03),
             ),
-          ),
+          ),*/
         ],
       ),
     );

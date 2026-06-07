@@ -59,11 +59,11 @@ class _HomeScreenState extends State<HomeScreen> {
   late final PageController _pageController;
 
   final List<String> _appBarTitles = [
-    'studentInfo',
-    'enrollmentRequestPage',
-    'uploadStudentData',
-    'StudentResultsScreen',
-    'profileScreen',
+    'StudentInfo',
+    'EnrollRequest',
+    'UploadData',
+    'StudentResults',
+    'Profile',
   ];
 
   final List<Widget> _screens = [
@@ -99,9 +99,9 @@ class _HomeScreenState extends State<HomeScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF87CEFA),
-                  const Color(0xFFADD8E6),
+                colors: const [
+                  Color(0xFF87CEFA),
+                  Color(0xFFADD8E6),
                 ],
               ),
               borderRadius: const BorderRadius.only(
@@ -121,84 +121,80 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _appBarTitles[_currentIndex].tr(),
-                    style: const TextStyle(
-                      color: Colors.indigo,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      // Language Dropdown
-                      Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: DropdownButton<Locale>(
-                          underline: const SizedBox(),
-                          icon: const Icon(Icons.language, color: Colors.indigo),
-                          value: context.locale,
-                          onChanged: (Locale? newLocale) {
-                            if (newLocale != null) context.setLocale(newLocale);
-                          },
-                          items: const [
-                            DropdownMenuItem(
-                              value: Locale('en'),
-                              child: Text("English"),
-                            ),
-                            DropdownMenuItem(
-                              value: Locale('my'),
-                              child: Text("မြန်မာ"),
-                            ),
+                  // Language Dropdown with Icon and Text on LEFT
+                  // Language Dropdown with Icon and Text on LEFT
+                  DropdownButton<Locale>(
+                    underline: const SizedBox(),
+                    // Remove the icon parameter from here
+                    value: context.locale,
+                    onChanged: (Locale? newLocale) {
+                      if (newLocale != null) context.setLocale(newLocale);
+                    },
+                    items: const [
+                      DropdownMenuItem(
+                        value: Locale('en'),
+                        child: Row(
+                          children: [
+                            Icon(Icons.language, color: Colors.indigo, size: 20),
+                            SizedBox(width: 8),
+                            Text("English"),
                           ],
                         ),
                       ),
-
-                      // Notification Icon with StreamBuilder - Fixed to show pending enrollment requests
-                      StreamBuilder<QuerySnapshot>(
-                        stream: FirebaseFirestore.instance
-                            .collection('enrollment_requests')
-                            .where('status', isEqualTo: 'Pending')
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          int count = snapshot.data?.docs.length ?? 0;
-
-                          return Stack(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.notifications, color: Colors.indigo),
-                                onPressed: () {
-                                  _pageController.jumpToPage(1); // EnrollmentRequestPage
-                                  setState(() => _currentIndex = 1);
-                                },
-                              ),
-                              if (count > 0)
-                                Positioned(
-                                  right: 6,
-                                  top: 6,
-                                  child: CircleAvatar(
-                                    radius: 8,
-                                    backgroundColor: Colors.red,
-                                    child: Text(
-                                      count > 9 ? '9+' : count.toString(),
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
+                      DropdownMenuItem(
+                        value: Locale('my'),
+                        child: Row(
+                          children: [
+                            Icon(Icons.language, color: Colors.indigo, size: 20),
+                            SizedBox(width: 8),
+                            Text("မြန်မာ"),
+                          ],
+                        ),
                       ),
                     ],
+                  ),
+
+                  // Notification Icon on RIGHT
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('enrollment_requests')
+                        .where('status', isEqualTo: 'Pending')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      int count = snapshot.data?.docs.length ?? 0;
+                      return Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications, color: Colors.indigo),
+                            onPressed: () {
+                              _pageController.jumpToPage(1);
+                              setState(() => _currentIndex = 1);
+                            },
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: CircleAvatar(
+                                radius: 8,
+                                backgroundColor: Colors.red,
+                                child: Text(
+                                  count > 9 ? '9+' : count.toString(),
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
             ),
           ),
-
           // Main Content
           Expanded(
             child: PageView(
@@ -213,8 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-
-      // Custom Bottom Navigation Bar
       bottomNavigationBar: Container(
         height: 80,
         decoration: BoxDecoration(
@@ -232,13 +226,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildNavItem(Icons.person, 'studentInfo'.tr(), 0),
-            _buildNavItem(Icons.add_circle, 'enrollmentRequestPage'.tr(), 1),
-            _buildNavItem(Icons.upload_file, 'uploadStudentData'.tr(), 2),
-            _buildNavItem(Icons.people, 'studentList'.tr(), 3),
-            _buildNavItem(Icons.account_circle, 'profileScreen'.tr(), 4),
+            _buildNavItem(Icons.dashboard, 'Students Info'.tr(), 0),
+            _buildNavItem(Icons.add_circle_outline, 'Enroll Request'.tr(), 1),
+            _buildNavItem(Icons.upload_file, 'Upload'.tr(), 2),
+            _buildNavItem(Icons.people, 'Students List'.tr(), 3),
+            _buildNavItem(Icons.account_circle, 'Profile'.tr(), 4),
           ],
         ),
       ),
@@ -248,44 +243,48 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     final isSelected = index == _currentIndex;
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _currentIndex = index;
-          _pageController.jumpToPage(index);
-        });
-      },
-      child: SizedBox(
-        width: 80,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 44,
-              height: 36,
-              decoration: BoxDecoration(
-                color: isSelected ? Colors.blue[50] : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _currentIndex = index;
+            _pageController.jumpToPage(index);
+          });
+        },
+        child: Container(
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 44,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.indigo.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  color: isSelected ? Colors.indigo : Colors.black,
+                  size: 24,
+                ),
               ),
-              child: Icon(
-                icon,
-                color: isSelected ? Colors.indigo : Colors.black,
-                size: 24,
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.indigo : Colors.black,
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.indigo : Colors.black,
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

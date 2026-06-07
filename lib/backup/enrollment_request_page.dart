@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:miit_project/screens/student_transcript.dart';
 
 class EnrollmentRequestPage extends StatefulWidget {
   const EnrollmentRequestPage({super.key});
@@ -15,140 +16,167 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
   late TabController _tabController;
   List<Map<String, dynamic>> oldStudentRequests = [];
   List<Map<String, dynamic>> newStudentRequests = [];
-  StreamSubscription<QuerySnapshot>? _oldStudentsSubscription;
-  StreamSubscription<QuerySnapshot>? _newStudentsSubscription;
+  List<Map<String, dynamic>> pendingTranscriptRequests = [];
+  List<Map<String, dynamic>> acceptedTranscriptRequests = [];
+  List<Map<String, dynamic>> rejectedTranscriptRequests = [];
+  StreamSubscription<QuerySnapshot>? _enrollmentSubscription;
+  StreamSubscription<QuerySnapshot>? _transcriptSubscription;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _setupStudentsListener();
+    _tabController = TabController(length: 3, vsync: this);
+    _setupEnrollmentListener();
+    _setupTranscriptListener();
   }
 
   @override
   void dispose() {
-    _oldStudentsSubscription?.cancel();
-    _newStudentsSubscription?.cancel();
+    _enrollmentSubscription?.cancel();
+    _transcriptSubscription?.cancel();
     _tabController.dispose();
     super.dispose();
   }
 
-  void _setupStudentsListener() {
-    // Listen for OLD students with pending enrollment
-    _oldStudentsSubscription = FirebaseFirestore.instance
-        .collection('students')
-        .where('stype', isEqualTo: 'old')
-        .where('academicInfo.enrollStatus', isEqualTo: 'pending')
+  void _setupEnrollmentListener() {
+    _enrollmentSubscription = FirebaseFirestore.instance
+        .collection('enrollment_requests')
+        .where('status', isEqualTo: 'Pending')
         .snapshots()
         .listen((snapshot) {
-      print('Found ${snapshot.docs.length} old students with pending enrollment');
-      _processOldStudentRequests(snapshot.docs);
-    });
-
-    // Listen for NEW students with pending enrollment
-    _newStudentsSubscription = FirebaseFirestore.instance
-        .collection('students')
-        .where('stype', isEqualTo: 'new')
-        .where('academicInfo.enrollStatus', isEqualTo: 'pending')
-        .snapshots()
-        .listen((snapshot) {
-      print('Found ${snapshot.docs.length} new students with pending enrollment');
-      _processNewStudentRequests(snapshot.docs);
+      print('Found ${snapshot.docs.length} pending enrollment requests');
+      _processEnrollmentRequests(snapshot.docs);
     });
   }
 
-  bool _isOldStudentByYear(int? startYear) {
-    if (startYear == null) return false;
-
-    // Get current admin year for comparison
-    // You might need to fetch this from your admin_academic_year collection
-    final currentYear = DateTime.now().year;
-    return startYear < currentYear;
+  void _setupTranscriptListener() {
+    _transcriptSubscription = FirebaseFirestore.instance
+        .collection('transcript_requests')
+        .orderBy('requestDate', descending: true)
+        .snapshots()
+        .listen((snapshot) {
+      print('Found ${snapshot.docs.length} total transcript requests');
+      _processAllTranscriptRequests(snapshot.docs);
+    });
   }
 
-  bool _hasPreviousEnrollment(Map<String, dynamic> studentData) {
-    // Check if student has payment records in previous academic years
-    // This would require checking your paymentInfo collection
-    return false; // Implement based on your business logic
-  }
+  void _processEnrollmentRequests(List<QueryDocumentSnapshot> docs) {
+    final oldRequests = <Map<String, dynamic>>[];
+    final newRequests = <Map<String, dynamic>>[];
 
-  void _processOldStudentRequests(List<QueryDocumentSnapshot> docs) {
-    final requests = docs.map((doc) {
+    for (final doc in docs) {
       final data = doc.data() as Map<String, dynamic>;
-      final academicInfo = data['academicInfo'] as Map<String, dynamic>? ?? {};
+      final studentType = data['studentType'] ?? 'new';
 
-      return {
-        "id": doc.id, // Student document ID
-        "studentId": doc.id,
-        "name": data['sname'] ?? 'Unknown',
-        "rollNo1": data['srollno'] ?? 'N/A',
-        "courseYear": academicInfo['courseYear'] ?? 'N/A',
-        "major": data['smajor'] ?? 'N/A',
-        "paymentStatus": "pending", // Default since we're not using enrollment_requests
-        "paymentAmount": 0,
-        "paymentReference": 'N/A',
-        "paymentDate": null,
-        "isNewStudent": false, // This is old student
-        "status": academicInfo['enrollStatus'] ?? 'pending',
-        "approvedBy": null,
-        "approvedDate": null,
+      final request = {
+        "id": doc.id,
+        "studentId": data['studentId'] ?? 'N/A',
+        "name": data['studentName'] ?? 'Unknown',
+        "rollNo1": data['studentId'] ?? 'N/A',
+        "courseYear": data['courseYear'] ?? 'N/A',
+        "major": data['major'] ?? 'N/A',
+        "paymentStatus": data['paymentStatus'] ?? 'pending',
+        "paymentAmount": data['paymentAmount'] ?? 0,
+        "paymentReference": data['paymentReference'] ?? 'N/A',
+        "paymentDate": data['paymentDate'],
+        "isNewStudent": studentType == 'new',
+        "status": data['status'] ?? 'Pending',
+        "approvedBy": data['approvedBy'],
+        "approvedDate": data['approvedDate'],
+        "requestDate": data['requestDate'],
         "accepted": false,
         "rejected": false,
         "processing": false,
         "deleting": false,
-        "studentData": data, // Store full student data for details
+        "enrollmentData": data,
+        "type": "enrollment",
       };
-    }).toList();
 
-    setState(() {
-      oldStudentRequests = requests;
-    });
-  }
-
-  void _processNewStudentRequests(List<QueryDocumentSnapshot> docs) {
-    final requests = docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final academicInfo = data['academicInfo'] as Map<String, dynamic>? ?? {};
-
-      return {
-        "id": doc.id, // Student document ID
-        "studentId": doc.id,
-        "name": data['sname'] ?? 'Unknown',
-        "rollNo1": data['srollno'] ?? 'N/A',
-        "courseYear": academicInfo['courseYear'] ?? 'N/A',
-        "major": data['smajor'] ?? 'N/A',
-        "paymentStatus": "pending", // Default since we're not using enrollment_requests
-        "paymentAmount": 0,
-        "paymentReference": 'N/A',
-        "paymentDate": null,
-        "isNewStudent": true, // This is new student
-        "status": academicInfo['enrollStatus'] ?? 'pending',
-        "approvedBy": null,
-        "approvedDate": null,
-        "accepted": false,
-        "rejected": false,
-        "processing": false,
-        "deleting": false,
-        "studentData": data, // Store full student data for details
-      };
-    }).toList();
-
-    setState(() {
-      newStudentRequests = requests;
-    });
-  }
-
-  Future<Map<String, dynamic>?> _getStudentDetails(String studentId) async {
-    try {
-      final doc = await FirebaseFirestore.instance.collection('students').doc(studentId).get();
-      if (doc.exists) return doc.data();
-    } catch (e) {
-      print("Error getting student details: $e");
+      if (studentType == 'old') {
+        oldRequests.add(request);
+      } else {
+        newRequests.add(request);
+      }
     }
-    return null;
+
+    setState(() {
+      oldStudentRequests = oldRequests;
+      newStudentRequests = newRequests;
+    });
   }
 
-  // Individual confirm button handler
+  void _processAllTranscriptRequests(List<QueryDocumentSnapshot> docs) {
+    final pendingRequests = <Map<String, dynamic>>[];
+    final acceptedRequests = <Map<String, dynamic>>[];
+    final rejectedRequests = <Map<String, dynamic>>[];
+
+    for (final doc in docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final status = data['status'] ?? 'Pending';
+
+      // Get the student name - prioritize studentNameEnglish from UserTranscript form
+      // This will display "Khaing Thazin Htun" from the English name field
+      String studentName = 'Unknown';
+
+      if (data['studentNameEnglish'] != null && data['studentNameEnglish'].toString().isNotEmpty) {
+        studentName = data['studentNameEnglish'];
+      } else if (data['studentName'] != null && data['studentName'].toString().isNotEmpty) {
+        studentName = data['studentName'];
+      } else if (data['fullName'] != null && data['fullName'].toString().isNotEmpty) {
+        studentName = data['fullName'];
+      }
+
+      final request = {
+        "id": doc.id,
+        "studentId": data['studentId'] ?? 'N/A',
+        "name": studentName,
+        "rollNo1": data['studentId'] ?? 'N/A',
+        "requestType": data['documentType'] ?? 'Transcript',
+        "purpose": data['purpose'] ?? 'N/A',
+        "deliveryMethod": data['deliveryMethod'] ?? 'Pickup',
+        "status": status,
+        "approvedBy": data['approvedBy'],
+        "approvedDate": data['approvedDate'],
+        "requestDate": data['requestDate'] ?? data['createdAt'],
+        "accepted": status == 'Approved',
+        "rejected": status == 'Rejected',
+        "processing": false,
+        "deleting": false,
+        "requestData": data,
+        "type": "transcript",
+        "documentType": data['documentType'] ?? 'အမှတ်စာရင်း',
+        "academicYear": data['academicYear'] ?? 'N/A',
+        "examYear": data['examYear'] ?? 'N/A',
+        "classSubject": data['classSubject'] ?? 'N/A',
+        "nrc": data['nrc'] ?? 'N/A',
+        "fatherName": data['fatherName'] ?? 'N/A',
+        "address": data['address'] ?? 'N/A',
+        "studentYears": data['studentYears'] ?? 'N/A',
+        "studentNameEnglish": data['studentNameEnglish'] ?? studentName,
+        "signature": data['signature'] ?? 'N/A',
+        "gender": data['gender'] ?? 'N/A',
+        "examResult": data['examResult'] ?? 'N/A',
+        "paymentStatus": data['paymentStatus'] ?? 'pending',
+        "paymentAmount": data['paymentAmount'] ?? 0,
+        "bDate": data['bDate'] ?? data['dateOfBirth'] ?? 'N/A',
+      };
+
+      if (status == 'Pending') {
+        pendingRequests.add(request);
+      } else if (status == 'Approved') {
+        acceptedRequests.add(request);
+      } else if (status == 'Rejected') {
+        rejectedRequests.add(request);
+      }
+    }
+
+    setState(() {
+      pendingTranscriptRequests = pendingRequests;
+      acceptedTranscriptRequests = acceptedRequests;
+      rejectedTranscriptRequests = rejectedRequests;
+    });
+  }
+
   Future<void> _confirmIndividualRequest(Map<String, dynamic> request) async {
     if (!request["accepted"] && !request["rejected"]) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,55 +193,101 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
       final currentUser = FirebaseAuth.instance.currentUser;
       final currentTime = FieldValue.serverTimestamp();
 
-      // Update student document directly
-      final studentRef = FirebaseFirestore.instance.collection('students').doc(request["studentId"]);
+      if (request["type"] == "enrollment") {
+        if (request["accepted"]) {
+          await FirebaseFirestore.instance
+              .collection('enrollment_requests')
+              .doc(request["id"])
+              .update({
+            'status': 'Approved',
+            'approvedBy': currentUser?.email ?? 'Admin',
+            'approvedDate': currentTime,
+            'lastUpdated': currentTime,
+          });
 
-      if (request["accepted"]) {
-        // Accepted - Enrolled & Active status
-        await studentRef.update({
-          'academicInfo.enrollStatus': 'enrolled',
-          'academicInfo.academicStatus': 'active',
-          'academicInfo.enrollmentDate': currentTime,
-          'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
-          'academicInfo.approvedDate': currentTime,
+          await FirebaseFirestore.instance
+              .collection('students')
+              .doc(request["studentId"])
+              .update({
+            'academicInfo.enrollStatus': 'enrolled',
+            'academicInfo.academicStatus': 'active',
+            'academicInfo.enrollmentDate': currentTime,
+            'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
+            'academicInfo.approvedDate': currentTime,
+            'lastUpdated': currentTime,
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${request["name"]} ${'acceptedSuccessfully'.tr()}'), backgroundColor: Colors.green)
+          );
+
+          setState(() {
+            if (request["isNewStudent"]) {
+              newStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+            } else {
+              oldStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+            }
+          });
+
+        } else if (request["rejected"]) {
+          await FirebaseFirestore.instance
+              .collection('enrollment_requests')
+              .doc(request["id"])
+              .update({
+            'status': 'Rejected',
+            'approvedBy': currentUser?.email ?? 'Admin',
+            'approvedDate': currentTime,
+            'lastUpdated': currentTime,
+          });
+
+          await FirebaseFirestore.instance
+              .collection('students')
+              .doc(request["studentId"])
+              .update({
+            'academicInfo.enrollStatus': 'rejected',
+            'academicInfo.academicStatus': 'suspended',
+            'academicInfo.enrollmentDate': currentTime,
+            'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
+            'academicInfo.approvedDate': currentTime,
+            'lastUpdated': currentTime,
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${request["name"]} ${'rejectedSuccessfully'.tr()}'), backgroundColor: Colors.red)
+          );
+
+          setState(() {
+            if (request["isNewStudent"]) {
+              newStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+            } else {
+              oldStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+            }
+          });
+        }
+      } else if (request["type"] == "transcript") {
+        final newStatus = request["accepted"] ? "Approved" : "Rejected";
+
+        await FirebaseFirestore.instance
+            .collection('transcript_requests')
+            .doc(request["id"])
+            .update({
+          'status': newStatus,
+          'approvedBy': currentUser?.email ?? 'Admin',
+          'approvedDate': currentTime,
           'lastUpdated': currentTime,
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${request["name"]} ${'acceptedSuccessfully'.tr()}'), backgroundColor: Colors.green)
+            SnackBar(
+              content: Text('${request["name"]} ${newStatus == "Approved" ? 'acceptedSuccessfully'.tr() : 'rejectedSuccessfully'.tr()}'),
+              backgroundColor: newStatus == "Approved" ? Colors.green : Colors.red,
+            )
         );
 
-        // Update local state to reflect the change
         setState(() {
-          request["status"] = 'enrolled';
-          request["accepted"] = true;
-          request["rejected"] = false;
-          request["approvedBy"] = currentUser?.email ?? 'Admin';
-          request["approvedDate"] = DateTime.now();
-        });
-
-      } else if (request["rejected"]) {
-        // Rejected - Rejected & Suspended status
-        await studentRef.update({
-          'academicInfo.enrollStatus': 'rejected',
-          'academicInfo.academicStatus': 'suspended',
-          'academicInfo.enrollmentDate': currentTime,
-          'academicInfo.approvedBy': currentUser?.email ?? 'Admin',
-          'academicInfo.approvedDate': currentTime,
-          'lastUpdated': currentTime,
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${request["name"]} ${'rejectedSuccessfully'.tr()}'), backgroundColor: Colors.red)
-        );
-
-        // Update local state to reflect the change
-        setState(() {
-          request["status"] = 'rejected';
-          request["accepted"] = false;
-          request["rejected"] = true;
-          request["approvedBy"] = currentUser?.email ?? 'Admin';
-          request["approvedDate"] = DateTime.now();
+          request["status"] = newStatus;
+          request["accepted"] = newStatus == "Approved";
+          request["rejected"] = newStatus == "Rejected";
         });
       }
 
@@ -229,7 +303,6 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     }
   }
 
-  // Delete request handler - Now we'll remove from pending list instead of deleting document
   Future<void> _deleteRequest(Map<String, dynamic> request) async {
     bool? confirmDelete = await showDialog<bool>(
       context: context,
@@ -259,24 +332,48 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     });
 
     try {
-      // Since we're working with student documents, we'll just update the status to remove from pending
-      await FirebaseFirestore.instance.collection('students').doc(request["studentId"]).update({
-        'academicInfo.enrollStatus': 'Removed',
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
+      if (request["type"] == "enrollment") {
+        await FirebaseFirestore.instance
+            .collection('enrollment_requests')
+            .doc(request["id"])
+            .delete();
+
+        await FirebaseFirestore.instance
+            .collection('students')
+            .doc(request["studentId"])
+            .update({
+          'academicInfo.enrollStatus': 'Removed',
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+
+        setState(() {
+          if (request["isNewStudent"]) {
+            newStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+          } else {
+            oldStudentRequests.removeWhere((req) => req["id"] == request["id"]);
+          }
+        });
+
+      } else if (request["type"] == "transcript") {
+        await FirebaseFirestore.instance
+            .collection('transcript_requests')
+            .doc(request["id"])
+            .delete();
+
+        setState(() {
+          if (request["status"] == "Approved") {
+            acceptedTranscriptRequests.removeWhere((req) => req["id"] == request["id"]);
+          } else if (request["status"] == "Rejected") {
+            rejectedTranscriptRequests.removeWhere((req) => req["id"] == request["id"]);
+          } else {
+            pendingTranscriptRequests.removeWhere((req) => req["id"] == request["id"]);
+          }
+        });
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${request["name"]} ${'removedSuccessfully'.tr()}'), backgroundColor: Colors.green)
       );
-
-      // Remove the request from the list
-      setState(() {
-        if (request["isNewStudent"]) {
-          newStudentRequests.removeWhere((req) => req["id"] == request["id"]);
-        } else {
-          oldStudentRequests.removeWhere((req) => req["id"] == request["id"]);
-        }
-      });
 
     } catch (e) {
       print("Error removing request: $e");
@@ -290,71 +387,96 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     }
   }
 
-  void _showStudentDetails(Map<String, dynamic> request) {
-    final studentDetails = request["studentData"];
+  void _showStudentDetails(Map<String, dynamic> request) async {
+    try {
+      if (request["type"] == "transcript") {
+        final requestData = request["requestData"];
+        final bDate = request["bDate"] ?? 'N/A';
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('studentDetails'.tr()),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('studentRollNo'.tr(), request["rollNo1"]),
-              _buildDetailRow('studentType'.tr(), request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()),
-              _buildDetailRow('enrollmentStatus'.tr(), request["status"]),
-              if (request["approvedBy"] != null) _buildDetailRow('approvedBy'.tr(), request["approvedBy"]),
-              if (request["approvedDate"] != null) _buildDetailRow('approvedDate'.tr(), _formatDate(request["approvedDate"])),
-              _buildDetailRow('bDate'.tr(), studentDetails['sdob'] ?? 'N/A'),
-              _buildDetailRow('fatherName'.tr(), studentDetails['parents']?['father']?['fname_eng'] ?? 'N/A'),
-              _buildDetailRow('motherName'.tr(), studentDetails['parents']?['mother']?['mname_eng'] ?? 'N/A'),
-              _buildDetailRow('address'.tr(), studentDetails['saddress'] ?? 'N/A'),
-              _buildDetailRow('religion'.tr(), studentDetails['sreligion'] ?? 'N/A'),
-              _buildDetailRow('gender'.tr(), studentDetails['sgender'] ?? 'N/A'),
-              const SizedBox(height: 16),
-              Text('academicInformation'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
-              _buildDetailRow('courseYear'.tr(), request["courseYear"] ?? 'N/A'),
-              _buildDetailRow('major'.tr(), request["major"] ?? 'N/A'),
-              _buildDetailRow('academicYear'.tr(), studentDetails['academicInfo']?['academicYear'] ?? 'N/A'),
-              _buildDetailRow('enrollStatus'.tr(), studentDetails['academicInfo']?['enrollStatus'] ?? 'N/A'),
-              _buildDetailRow('academicStatus'.tr(), studentDetails['academicInfo']?['academicStatus'] ?? 'N/A'),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('close'.tr()),
-          ),
-        ],
-      ),
-    );
-  }
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text('transcriptDetails'.tr()),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDetailRow('studentRollNo'.tr(), request["rollNo1"]),
+                  _buildDetailRow('bDate'.tr(), request["bDate"]),
+                  _buildDetailRow('requestStatus'.tr(), request["status"]),
+                  _buildDetailRow('documentType'.tr(), requestData['documentType'] ?? 'အမှတ်စာရင်း'),
+                  _buildDetailRow('eName'.tr(), requestData['studentNameEnglish'] ?? request["name"]),
+                  _buildDetailRow('academicYear'.tr(), requestData['academicYear'] ?? 'N/A'),
+                  _buildDetailRow('major'.tr(), requestData['classSubject'] ?? 'N/A'),
+                  _buildDetailRow('nrc'.tr(), requestData['nrc'] ?? 'N/A'),
+                  _buildDetailRow('fatherName'.tr(), requestData['fatherName'] ?? 'N/A'),
+                  _buildDetailRow('address'.tr(), requestData['address'] ?? 'N/A'),
+                  _buildDetailRow('email'.tr(), requestData['email'] ?? 'N/A'),
+                  _buildDetailRow('studentYears'.tr(), requestData['studentYears'] ?? 'N/A'),
+                  _buildDetailRow('examResult'.tr(), requestData['examResult'] ?? 'N/A'),
+                  _buildDetailRow('purpose'.tr(), requestData['purpose'] ?? 'N/A'),
+                ],
+              ),
+            ),
 
-  void _showPaymentDetails(Map<String, dynamic> request) {
-    // Since we're not using enrollment_requests, show basic payment info
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('paymentInformation'.tr()),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('studentID'.tr(), request["rollNo1"]),
-              _buildDetailRow('studentName'.tr(), request["name"]),
-              _buildDetailRow('studentType'.tr(), request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()),
-              _buildDetailRow('enrollmentStatus'.tr(), request["status"]),
-              _buildDetailRow('paymentStatus'.tr(), 'Pending - To be processed'),
-              _buildDetailRow('note'.tr(), 'Payment will be processed after enrollment approval'),
-            ],
           ),
-        ),
-      ),
-    );
+        );
+      } else {
+        final studentDoc = await FirebaseFirestore.instance
+            .collection('students')
+            .doc(request["studentId"])
+            .get();
+
+        if (!studentDoc.exists) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('studentNotFound'.tr()), backgroundColor: Colors.red),
+          );
+          return;
+        }
+
+        final studentData = studentDoc.data() as Map<String, dynamic>;
+        final enrollmentData = request["enrollmentData"];
+        final bDate = studentData['sdob'] ?? 'N/A';
+
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Text('studentDetails'.tr()),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildDetailRow('studentRollNo'.tr(), request["rollNo1"]),
+                  _buildDetailRow('studentType'.tr(), request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()),
+                  _buildDetailRow('enrollmentStatus'.tr(), request["status"]),
+                  _buildDetailRow('bDate'.tr(), bDate),
+                  _buildDetailRow('fatherName'.tr(), studentData['parents']?['father']?['fname_eng'] ?? 'N/A'),
+                  _buildDetailRow('motherName'.tr(), studentData['parents']?['mother']?['mname_eng'] ?? 'N/A'),
+                  _buildDetailRow('address'.tr(), studentData['saddress'] ?? 'N/A'),
+                  _buildDetailRow('religion'.tr(), studentData['sreligion'] ?? 'N/A'),
+                  _buildDetailRow('gender'.tr(), studentData['sgender'] ?? 'N/A'),
+                  const SizedBox(height: 16),
+                  Text('requestInformation'.tr(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                  _buildDetailRow('courseYear'.tr(), enrollmentData['courseYear'] ?? 'N/A'),
+                  _buildDetailRow('programType'.tr(), enrollmentData['programType'] ?? 'N/A'),
+                  _buildDetailRow('major'.tr(), enrollmentData['major'] ?? 'N/A'),
+                  _buildDetailRow('academicYear'.tr(), enrollmentData['academicYear'] ?? 'N/A'),
+                  _buildDetailRow('paymentStatus'.tr(), enrollmentData['paymentStatus'] ?? 'N/A'),
+                ],
+              ),
+            ),
+
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error fetching student details: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('errorLoadingDetails'.tr()), backgroundColor: Colors.red),
+      );
+    }
   }
 
   String _formatDate(dynamic date) {
@@ -387,10 +509,11 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
     );
   }
 
-  Widget _buildRequestCard(Map<String, dynamic> request, bool isNewStudent) {
-    final bool isPending = request["status"] == 'pending';
-    final bool isEnrolled = request["status"] == 'enrolled';
-    final bool isRejected = request["status"] == 'rejected';
+  Widget _buildRequestCard(Map<String, dynamic> request, bool isAcceptedTranscript) {
+    final bool isPending = request["status"] == 'Pending';
+    final bool isAccepted = request["status"] == 'Approved';
+    final bool isRejected = request["status"] == 'Rejected';
+    final bool isTranscript = request["type"] == "transcript";
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -399,7 +522,6 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            // Student Info Row
             Row(
               children: [
                 Expanded(
@@ -413,65 +535,56 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "${request["rollNo1"]!} • ${isNewStudent ? 'newStudent'.tr() : 'oldStudent'.tr()}",
+                        request["rollNo1"]!,
                         style: const TextStyle(fontSize: 14, color: Colors.grey),
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Text(
-                            "${'payment1'.tr()}: ${request["paymentStatus"]}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(width: 16),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isEnrolled
-                                  ? Colors.green[100]
-                                  : isRejected
-                                  ? Colors.red[100]
-                                  : Colors.orange[100],
+                              color: isPending ? Colors.orange[100] :
+                              isAccepted ? Colors.green[100] : Colors.red[100],
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               request["status"]!,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isEnrolled
-                                    ? Colors.green[800]
-                                    : isRejected
-                                    ? Colors.red[800]
-                                    : Colors.orange[800],
+                                color: isPending ? Colors.orange[800] :
+                                isAccepted ? Colors.green[800] : Colors.red[800],
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
+                          const SizedBox(width: 8),
+
                         ],
                       ),
-                      if (request["approvedBy"] != null) ...[
-                        const SizedBox(height: 2),
+                      if (isTranscript) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          "Approved by: ${request["approvedBy"]}",
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          "Purpose: ${request["purpose"] ?? 'N/A'}",
+                          style: const TextStyle(fontSize: 12, color: Colors.purple),
                         ),
+
                       ],
+
+
                     ],
                   ),
                 ),
 
-                // Accept/Reject Checkboxes with Confirm & Delete buttons below (only for pending requests)
                 if (isPending)
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      // Accept/Reject Row
+                      // Accept checkbox (above)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('accept'.tr(), style: const TextStyle(fontSize: 12)),
                           Checkbox(
@@ -486,10 +599,13 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                             },
                             activeColor: Colors.green,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                           ),
                         ],
                       ),
+                      // Reject checkbox (below)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('reject'.tr(), style: const TextStyle(fontSize: 12)),
                           Checkbox(
@@ -504,15 +620,15 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                             },
                             activeColor: Colors.red,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                           ),
                         ],
                       ),
-
-                      // Confirm & Delete buttons positioned exactly under checkboxes
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 8), // Space between checkboxes and buttons
+                      // Buttons row
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Confirm Button
                           ElevatedButton(
                             onPressed: (request["processing"] || request["deleting"])
                                 ? null
@@ -539,30 +655,59 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: (request["deleting"]) ? null : () => _deleteRequest(request),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              minimumSize: const Size(70, 30),
+                            ),
+                            child: request["deleting"]
+                                ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                                : Text(
+                              'delete'.tr(),
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
                         ],
                       ),
                     ],
+
                   )
-                else
-                // Show status badge and remove button for processed requests
+                else if (isTranscript && isAccepted)
                   Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        isEnrolled ? Icons.check_circle : Icons.cancel,
-                        color: isEnrolled ? Colors.green : Colors.red,
+                        Icons.check_circle,
+                        color: Colors.green,
                         size: 40,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isEnrolled ? 'enrolled'.tr() : 'rejected'.tr(),
+                        request["status"]!,
                         style: TextStyle(
-                          color: isEnrolled ? Colors.green : Colors.red,
+                          color: Colors.green,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      if (request["approvedDate"] != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(request["approvedDate"]),
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                      ],
                       const SizedBox(height: 8),
-                      // Remove Button for processed requests
                       ElevatedButton(
                         onPressed: (request["deleting"]) ? null : () => _deleteRequest(request),
                         style: ElevatedButton.styleFrom(
@@ -581,20 +726,78 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                           ),
                         )
                             : Text(
-                          'remove'.tr(),
+                          'delete'.tr(),
                           style: const TextStyle(fontSize: 12),
                         ),
                       ),
                     ],
-                  ),
+                  )
+                else if (isTranscript && isRejected)
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.cancel,
+                          color: Colors.red,
+                          size: 40,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          request["status"]!,
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: (request["deleting"]) ? null : () => _deleteRequest(request),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            minimumSize: const Size(70, 30),
+                          ),
+                          child: request["deleting"]
+                              ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                              : Text(
+                            'delete'.tr(),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (!isPending && !isTranscript)
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            request["status"] == 'Approved' ? Icons.check_circle : Icons.cancel,
+                            color: request["status"] == 'Approved' ? Colors.green : Colors.red,
+                            size: 40,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            request["status"]!,
+                            style: TextStyle(
+                              color: request["status"] == 'Approved' ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
               ],
             ),
-
-            // Student Details & Payment Details Buttons
             const SizedBox(height: 8),
             Row(
               children: [
-                // Student Details Button
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () {
@@ -612,30 +815,103 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 4),
-
-                // Payment Details Button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      _showPaymentDetails(request);
-                    },
-                    icon: const Icon(Icons.payment_outlined, size: 16),
-                    label: Text(
-                      'paymentInfo'.tr(),
-                      style: const TextStyle(fontSize: 12),
+                if (isTranscript && isAccepted)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _navigateToSendTranscript(request);
+                      },
+                      icon: const Icon(Icons.send_outlined, size: 16),
+                      label: Text(
+                        'sendTranscript'.tr(),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.purple[100],
+                        foregroundColor: Colors.purple[800],
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[100],
-                      foregroundColor: Colors.green[800],
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  )
+                else
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _showPaymentDetails(request);
+                      },
+                      icon: const Icon(Icons.payment_outlined, size: 16),
+                      label: Text(
+                        'paymentInfo'.tr(),
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green[100],
+                        foregroundColor: Colors.green[800],
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showPaymentDetails(Map<String, dynamic> request) {
+    final requestData = request["type"] == "enrollment"
+        ? request["enrollmentData"]
+        : request["requestData"];
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('paymentInformation'.tr()),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('studentID'.tr(), request["rollNo1"]),
+              _buildDetailRow('studentName'.tr(), request["name"]),
+              _buildDetailRow('requestType'.tr(), request["type"] == "enrollment"
+                  ? 'enrollment'.tr()
+                  : 'transcript'.tr()),
+              _buildDetailRow('status'.tr(), request["status"]),
+              _buildDetailRow('paymentAmount'.tr(), 'Ks ${requestData['paymentAmount']?.toString() ?? '0'}'),
+              _buildDetailRow('paymentReference'.tr(), requestData['paymentReference'] ?? 'N/A'),
+              _buildDetailRow('paymentDate'.tr(), requestData['paymentDate'] ?? 'N/A'),
+              _buildDetailRow('paymentTime'.tr(), requestData['paymentTime'] ?? 'N/A'),
+              _buildDetailRow('paymentStatus'.tr(), requestData['paymentStatus'] ?? 'N/A'),
+            ],
+          ),
+        ),
+
+      ),
+    );
+  }
+
+  void _navigateToSendTranscript(Map<String, dynamic> request) {
+    String studentName = request["name"];
+
+    if (studentName == 'Unknown' || studentName == 'N/A') {
+      final requestData = request["requestData"];
+      studentName = requestData['studentNameEnglish'] ??
+          requestData['studentName'] ??
+          requestData['fullName'] ??
+          'Unknown';
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StudentTranscript(
+          transcriptRequestId: request["id"],
+          studentId: request["studentId"],
+          studentName: studentName,
+          rollNumber: request["rollNo1"],
         ),
       ),
     );
@@ -658,8 +934,9 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
       );
     }
 
-    return ListView(
-      children: oldStudentRequests.map((request) => _buildRequestCard(request, false)).toList(),
+    return ListView.builder(
+      itemCount: oldStudentRequests.length,
+      itemBuilder: (context, index) => _buildRequestCard(oldStudentRequests[index], false),
     );
   }
 
@@ -680,8 +957,104 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
       );
     }
 
-    return ListView(
-      children: newStudentRequests.map((request) => _buildRequestCard(request, true)).toList(),
+    return ListView.builder(
+      itemCount: newStudentRequests.length,
+      itemBuilder: (context, index) => _buildRequestCard(newStudentRequests[index], false),
+    );
+  }
+
+  Widget _buildTranscriptRequestsView() {
+    return DefaultTabController(
+      length: 3,
+      child: Column(
+        children: [
+          Container(
+            color: Colors.white,
+            child: TabBar(
+              labelColor: Colors.blue,
+              unselectedLabelColor: Colors.grey,
+              indicatorColor: Colors.blue,
+              tabs: [
+                Tab(
+                  text: '${'pending'.tr()} (${pendingTranscriptRequests.length})',
+                ),
+                Tab(
+                  text: '${'accepted'.tr()} (${acceptedTranscriptRequests.length})',
+                ),
+                Tab(
+                  text: '${'rejected'.tr()} (${rejectedTranscriptRequests.length})',
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                pendingTranscriptRequests.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.description_outlined, size: 48, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      Text(
+                        'noPendingTranscripts'.tr(),
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      )
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: pendingTranscriptRequests.length,
+                  itemBuilder: (context, index) {
+                    return _buildRequestCard(pendingTranscriptRequests[index], false);
+                  },
+                ),
+                acceptedTranscriptRequests.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle_outline, size: 48, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      Text(
+                        'noAcceptedTranscripts'.tr(),
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      )
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: acceptedTranscriptRequests.length,
+                  itemBuilder: (context, index) {
+                    return _buildRequestCard(acceptedTranscriptRequests[index], true);
+                  },
+                ),
+                rejectedTranscriptRequests.isEmpty
+                    ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.cancel_outlined, size: 48, color: Colors.grey),
+                      const SizedBox(height: 8),
+                      Text(
+                        'noRejectedTranscripts'.tr(),
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      )
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  itemCount: rejectedTranscriptRequests.length,
+                  itemBuilder: (context, index) {
+                    return _buildRequestCard(rejectedTranscriptRequests[index], false);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -689,7 +1062,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-
+        toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: [
@@ -701,6 +1074,10 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
               icon: const Icon(Icons.person_add_outlined),
               text: '${'newStudent'.tr()} (${newStudentRequests.length})',
             ),
+            Tab(
+              icon: const Icon(Icons.description),
+              text: '${'transcript'.tr()} (${pendingTranscriptRequests.length + acceptedTranscriptRequests.length + rejectedTranscriptRequests.length})',
+            ),
           ],
         ),
       ),
@@ -709,6 +1086,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
         children: [
           _buildOldStudentRequestsView(),
           _buildNewStudentRequestsView(),
+          _buildTranscriptRequestsView(),
         ],
       ),
     );

@@ -419,12 +419,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('close'.tr()),
-              ),
-            ],
+
           ),
         );
       } else {
@@ -472,12 +467,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                 ],
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('close'.tr()),
-              ),
-            ],
+
           ),
         );
       }
@@ -545,9 +535,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "${request["rollNo1"]!} • ${isTranscript
-                            ? "Transcript (${request["documentType"]})"
-                            : request["isNewStudent"] ? 'newStudent'.tr() : 'oldStudent'.tr()}",
+                        request["rollNo1"]!,
                         style: const TextStyle(fontSize: 14, color: Colors.grey),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -572,15 +560,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            "${'payment1'.tr()}: ${request["paymentStatus"]}",
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.green,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+
                         ],
                       ),
                       if (isTranscript) ...[
@@ -589,33 +569,22 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                           "Purpose: ${request["purpose"] ?? 'N/A'}",
                           style: const TextStyle(fontSize: 12, color: Colors.purple),
                         ),
-                        Text(
-                          "Class/Subject: ${request["classSubject"] ?? 'N/A'}",
-                          style: const TextStyle(fontSize: 12, color: Colors.blue),
-                        ),
+
                       ],
-                      if (request["paymentReference"] != null && request["paymentReference"] != 'N/A') ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          "Reference: ${request["paymentReference"]}",
-                          style: const TextStyle(fontSize: 12, color: Colors.blue),
-                        ),
-                      ],
-                      if (request["paymentAmount"] != null && request["paymentAmount"] > 0) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          "Amount: Ks ${request["paymentAmount"]}",
-                          style: const TextStyle(fontSize: 12, color: Colors.green),
-                        ),
-                      ],
+
+
                     ],
                   ),
                 ),
 
                 if (isPending)
                   Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      // Accept checkbox (above)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('accept'.tr(), style: const TextStyle(fontSize: 12)),
                           Checkbox(
@@ -630,10 +599,13 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                             },
                             activeColor: Colors.green,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                           ),
                         ],
                       ),
+                      // Reject checkbox (below)
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text('reject'.tr(), style: const TextStyle(fontSize: 12)),
                           Checkbox(
@@ -648,11 +620,14 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                             },
                             activeColor: Colors.red,
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 8), // Space between checkboxes and buttons
+                      // Buttons row
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           ElevatedButton(
                             onPressed: (request["processing"] || request["deleting"])
@@ -680,7 +655,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                               style: const TextStyle(fontSize: 12),
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 8),
                           ElevatedButton(
                             onPressed: (request["deleting"]) ? null : () => _deleteRequest(request),
                             style: ElevatedButton.styleFrom(
@@ -706,6 +681,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
                         ],
                       ),
                     ],
+
                   )
                 else if (isTranscript && isAccepted)
                   Column(
@@ -912,12 +888,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('close'.tr()),
-          ),
-        ],
+
       ),
     );
   }
@@ -1091,6 +1062,7 @@ class _EnrollmentRequestPageState extends State<EnrollmentRequestPage> with Sing
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: [
