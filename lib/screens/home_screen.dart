@@ -268,7 +268,7 @@ class MIITHomePage extends StatelessWidget {
           const SizedBox(height: 12),
 
           // Test Connection Button
-          ElevatedButton(
+         /* ElevatedButton(
             onPressed: () async {
               try {
                 final result = await Supabase.instance.client
@@ -296,7 +296,7 @@ class MIITHomePage extends StatelessWidget {
               'Test Supabase Connection',
               style: TextStyle(fontSize: screenWidth * 0.03),
             ),
-          ),
+          ),*/
         ],
       ),
     );
