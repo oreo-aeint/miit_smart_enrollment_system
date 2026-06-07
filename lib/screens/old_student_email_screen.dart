@@ -248,10 +248,17 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
             children: [
               Icon(icon, color: iconColor, size: 28),
               const SizedBox(width: 10),
-              Text(title),
+              Expanded(  // Add this to prevent overflow
+                child: Text(title),
+              ),
             ],
           ),
-          content: Text(message),
+          content: ConstrainedBox(  // Add this to constrain content width
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+            ),
+            child: Text(message),
+          ),
           actions: actions,
         );
       },
@@ -267,10 +274,17 @@ class _OldStudentEmailScreenState extends State<OldStudentEmailScreen> {
             children: [
               const Icon(Icons.school, color: Colors.amber, size: 28),
               const SizedBox(width: 10),
-              Text(tr("congratulations")),
+              Expanded(  // Add this to prevent overflow
+                child: Text(tr("congratulations")),
+              ),
             ],
           ),
-          content: Text(tr("You did it! So proud!")),
+          content: ConstrainedBox(  // Add this to constrain content width
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+            ),
+            child: Text(tr("You did it! So proud!")),
+          ),
           actions: [
             TextButton(
               onPressed: () {

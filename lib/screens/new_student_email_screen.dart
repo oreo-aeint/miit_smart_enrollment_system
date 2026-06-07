@@ -163,10 +163,17 @@ class _NewStudentEmailScreenState extends State<NewStudentEmailScreen> {
             children: [
               const Icon(Icons.warning, color: Colors.red, size: 28),
               const SizedBox(width: 10),
-              Text(title),
+              Expanded(  // Add this to prevent overflow
+                child: Text(title),
+              ),
             ],
           ),
-          content: Text(message),
+          content: ConstrainedBox(  // Add this to constrain content width
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.8,
+            ),
+            child: Text(message),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
