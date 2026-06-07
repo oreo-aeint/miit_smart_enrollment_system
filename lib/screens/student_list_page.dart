@@ -752,20 +752,7 @@ class _StudentResultsPageState extends State<StudentResultsPage>
                           style: TextStyle(fontSize: 11, color: Colors.blue.shade700, fontWeight: FontWeight.w600),
                         ),
                       ),
-                      if (hasRecords) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${_countTotalSemesters(academicData)} semesters',
-                            style: TextStyle(fontSize: 11, color: Colors.green.shade800, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      ],
+
                     ],
                   ),
                 ],
@@ -882,6 +869,7 @@ class _StudentResultsPageState extends State<StudentResultsPage>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        toolbarHeight: 0,
         bottom: TabBar(
           controller: _tabController,
           tabs: [

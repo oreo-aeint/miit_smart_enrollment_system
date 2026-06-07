@@ -891,95 +891,94 @@ class _StudentInfoScreenState extends State<StudentInfoScreen> {
     }
   }
 
-  // Build individual major column
-  // Build individual major column - FIXED VERSION
+  // Alternative fix with ConstrainedBox
   Widget _buildMajorColumn(String major, List<Student> students, Color color) {
     return Card(
       elevation: 3,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Column Header
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(8),
-                topRight: Radius.circular(8),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7, // Set a max height
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Column Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(8),
+                  topRight: Radius.circular(8),
+                ),
+                border: Border.all(color: color.withOpacity(0.3)),
               ),
-              border: Border.all(color: color.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  major == 'CSE' ? Icons.computer : Icons.electrical_services,
-                  color: color,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  '$major Students',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+              child: Row(
+                children: [
+                  Icon(
+                    major == 'CSE' ? Icons.computer : Icons.electrical_services,
                     color: color,
+                    size: 24,
                   ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    students.length.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
+                  const SizedBox(width: 12),
+                  Text(
+                    '$major Students',
+                    style: TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      students.length.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Students List
+            Expanded(
+              child: students.isEmpty
+                  ? Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Center(
+                  child: Text(
+                    'No $major students found',
+                    style: TextStyle(
+                      color: Colors.grey[600]!,
+                      fontStyle: FontStyle.italic,
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Students List - FIXED: Use Flexible with constraints instead of fixed height
-          Flexible(
-            child: students.isEmpty
-                ? Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Center(
-                child: Text(
-                  'No $major students found',
-                  style: TextStyle(
-                    color: Colors.grey[600]!,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+              )
+                  : ListView.builder(
+                shrinkWrap: false,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: students.length,
+                itemBuilder: (context, index) {
+                  final student = students[index];
+                  return _buildStudentListItem(student, index + 1, color);
+                },
               ),
-            )
-                : ListView.builder(
-              shrinkWrap: true,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: students.length,
-              itemBuilder: (context, index) {
-                final student = students[index];
-                return _buildStudentListItem(student, index + 1, color);
-              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
-
-  // Build student list item for major columns
-  // Build student list item for major columns - FIXED VERSION
   Widget _buildStudentListItem(Student student, int index, Color color) {
     final isSmallScreen = MediaQuery.of(context).size.width < 600;
 

@@ -24,7 +24,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
   final TextEditingController _masterPaymentController = TextEditingController();
   bool _isLoadingSettings = true;
 
-  // Allowed values for exam validation
   final List<String> _allowedYears = [
     'firstYear', 'secondYear', 'thirdYear', 'fourthYear', 'finalYear', 'fifthYear'
   ];
@@ -60,7 +59,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     return standardized;
   }
 
-  // --- Strict validation for Exam Rows (all-or-nothing) ---
   List<String> _validateExamRow(Map<String, dynamic> rowData, int rowIndex) {
     final errors = <String>[];
 
@@ -116,7 +114,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     return errors;
   }
 
-  // --- Strict validation for Entrance Rows (all-or-nothing) ---
   List<String> _validateEntranceRow(Map<String, dynamic> rowData, int rowIndex) {
     final errors = <String>[];
 
@@ -143,7 +140,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     return errors;
   }
 
-  // --- File handling methods ---
   Future<void> _showFileTypeSelection() async {
     final selectedType = await showDialog<String>(
       context: context,
@@ -335,7 +331,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     return rows.map((row) => row.map((cell) => cell.toString()).toList()).toList();
   }
 
-  // --- Exam upload (all-or-nothing validation, MERGE to keep all years) ---
   Future<Map<String, dynamic>> _uploadExamDataToFirestore(List<List<String>> data, String fileName, String batchId) async {
     if (data.length <= 1) {
       return {'success': false, 'documentIds': [], 'validRows': 0, 'invalidRows': 0, 'invalidDetails': ['No data rows found']};
@@ -346,7 +341,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     final List<String> invalidDetails = [];
     int invalidCount = 0;
 
-    // First pass: validate all rows
     for (int i = 1; i < data.length; i++) {
       final row = data[i];
       if (row.isEmpty || row.every((cell) => cell.trim().isEmpty)) continue;
@@ -367,7 +361,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       }
     }
 
-    // If any invalid row exists, reject the whole file
     if (invalidCount > 0) {
       return {
         'success': false,
@@ -379,7 +372,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       };
     }
 
-    // All rows are valid – proceed with batch upload
     final batch = FirebaseFirestore.instance.batch();
     final List<String> documentIds = [];
 
@@ -427,13 +419,11 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     if (!updateData.containsKey(year)) updateData[year] = {};
     (updateData[year] as Map)[semester] = semesterData;
 
-    // ✅ MERGE instead of overwrite – keeps existing years and adds new ones
     batch.set(docRef, updateData, SetOptions(merge: true));
 
     return standardizedRollNo;
   }
 
-  // --- Entrance upload (all-or-nothing validation, overwrite) ---
   Future<Map<String, dynamic>> _uploadEntranceDataToFirestore(List<List<String>> data, String fileName, String batchId) async {
     if (data.length <= 1) {
       return {'success': false, 'documentIds': [], 'validRows': 0, 'invalidRows': 0, 'invalidDetails': ['No data rows found']};
@@ -444,7 +434,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     final List<String> invalidDetails = [];
     int invalidCount = 0;
 
-    // First pass: validate all rows
     for (int i = 1; i < data.length; i++) {
       final row = data[i];
       if (row.isEmpty || row.every((cell) => cell.trim().isEmpty)) continue;
@@ -466,7 +455,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       }
     }
 
-    // If any invalid row exists, reject the whole file
     if (invalidCount > 0) {
       return {
         'success': false,
@@ -478,7 +466,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       };
     }
 
-    // All rows are valid – proceed with batch upload
     final batch = FirebaseFirestore.instance.batch();
     final List<String> documentIds = [];
 
@@ -544,7 +531,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     }
   }
 
-  // --- UI Helpers ---
   String _getFileTypeDisplayName(String fileType) => fileType == 'exam_results' ? 'Exam Results' : 'Entrance Pass Students';
   String _getFileTypeIcon(String fileType) => fileType == 'exam_results' ? '📊' : '🎓';
 
@@ -638,7 +624,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     );
   }
 
-  // --- Academic settings methods (unchanged) ---
   Future<void> _loadAcademicSettings() async {
     try {
       final docSnapshot = await FirebaseFirestore.instance.collection('admin_academic_year').doc('admin').get();
@@ -680,14 +665,13 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       return;
     }
 
-    // Generate academic year string
     final academicYear = '$startYear-$endYear';
 
     try {
       await FirebaseFirestore.instance.collection('admin_academic_year').doc('admin').set({
         'astart_year': startYear,
         'aend_year': endYear,
-        'academicYear': academicYear,  // Auto-generated field
+        'academicYear': academicYear,
         'set_amount': normalPayment,
         'set_amount_master': masterPayment,
         'last_updated': FieldValue.serverTimestamp(),
@@ -703,7 +687,6 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     }
   }
 
-  // --- UI Building Methods (unchanged) ---
   Widget _buildAcademicYearCard() {
     final startYear = _startYearController.text;
     final endYear = _endYearController.text;
@@ -718,36 +701,85 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // Add this to prevent overflow
           children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Academic Year and Payment', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue[700])),
-              IconButton(icon: Icon(Icons.settings, color: Colors.blue, size: 24), onPressed: _showAcademicSettingsDialog),
-            ]),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded( // Wrap with Expanded to prevent overflow
+                  child: Text(
+                    'Academic Year and Payment',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue[700]),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.settings, color: Colors.blue, size: 24),
+                  onPressed: _showAcademicSettingsDialog,
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
+                ),
+              ],
+            ),
             SizedBox(height: 16),
             _isLoadingSettings
                 ? Center(child: CircularProgressIndicator())
-                : Column(children: [
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.blue[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: Colors.blue[100]!)),
-                child: Row(children: [
-                  Icon(Icons.calendar_today, color: Colors.blue, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Academic Year', style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.w600)),
-                    SizedBox(height: 4),
-                    Text(startYear.isNotEmpty && endYear.isNotEmpty ? '$startYear - $endYear' : 'Not Set',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[700])),
-                  ])),
-                ]),
-              ),
-              SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: _buildPaymentCard('B.E Student Payment', 'Ks $normalPayment', Icons.person, Colors.green)),
-                SizedBox(width: 12),
-                Expanded(child: _buildPaymentCard('M.E Student Payment', 'Ks $masterPayment', Icons.school, Colors.purple)),
-              ]),
-            ]),
+                : Column(
+              mainAxisSize: MainAxisSize.min, // Add this
+              children: [
+                Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.blue[100]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.blue, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Academic Year',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              startYear.isNotEmpty && endYear.isNotEmpty ? '$startYear - $endYear' : 'Not Set',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[700],
+                              ),
+                              overflow: TextOverflow.ellipsis, // Add this
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildPaymentCard('B.E Student Payment', 'Ks $normalPayment', Icons.person, Colors.green),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: _buildPaymentCard('M.E Student Payment', 'Ks $masterPayment', Icons.school, Colors.purple),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ],
         ),
       ),
@@ -757,14 +789,38 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
   Widget _buildPaymentCard(String title, String amount, IconData icon, MaterialColor color) {
     return Container(
       padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(color: color[50], borderRadius: BorderRadius.circular(10), border: Border.all(color: color[100]!)),
-      child: Column(children: [
-        Icon(icon, color: color, size: 28),
-        SizedBox(height: 8),
-        Text(title, style: TextStyle(fontSize: 14, color: Colors.grey[700], fontWeight: FontWeight.w600), textAlign: TextAlign.center),
-        SizedBox(height: 4),
-        Text(amount, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color[700])),
-      ]),
+      decoration: BoxDecoration(
+        color: color[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color[100]!),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2, // Add this
+            overflow: TextOverflow.ellipsis, // Add this
+          ),
+          SizedBox(height: 4),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color[700],
+            ),
+            overflow: TextOverflow.ellipsis, // Add this
+          ),
+        ],
+      ),
     );
   }
 
@@ -799,67 +855,136 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
   }
 
   Widget _buildFilesList() {
-    return Column(children: [
-      Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Uploaded Files (${uploadedFiles.length})', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue[700])),
-          SizedBox(height: 12),
-          ConstrainedBox(
-            constraints: BoxConstraints(maxHeight: 200),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: uploadedFiles.length,
-              itemBuilder: (context, index) {
-                final file = uploadedFiles[index];
-                final fileData = uploadedFileData[index];
-                final validRows = fileData['validRows'] ?? 0;
-                final invalidRows = fileData['invalidRows'] ?? 0;
-                final success = fileData['success'] ?? false;
-                final hasInfo = (invalidRows > 0) || success;
-                return Card(
-                  margin: EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: Text(_getFileTypeIcon(fileData['fileType']), style: TextStyle(fontSize: 20)),
-                    title: Text(file.name),
-                    subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${(file.size / 1024).toStringAsFixed(1)} KB • ${fileData['status']}'),
-                      Text('Type: ${_getFileTypeDisplayName(fileData['fileType'])} • Valid: $validRows, Invalid: $invalidRows',
-                          style: TextStyle(fontSize: 12, color: Colors.blue[600])),
-                    ]),
-                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                      if (hasInfo) IconButton(icon: Icon(success ? Icons.info_outline : Icons.error_outline, color: success ? Colors.blue : Colors.red), onPressed: () => _showErrorDetails(fileData)),
-                      IconButton(icon: Icon(Icons.remove_red_eye, color: Colors.blue), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FilePreviewPage(file: file)))),
-                      IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _removeFile(index)),
-                    ]),
-                  ),
-                );
-              },
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey[300]!)),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Uploaded Files (${uploadedFiles.length})',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue[700])
+              ),
+              SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.35,
+                  minHeight: 80,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: AlwaysScrollableScrollPhysics(),
+                  itemCount: uploadedFiles.length,
+                  itemBuilder: (context, index) {
+                    final file = uploadedFiles[index];
+                    final fileData = uploadedFileData[index];
+                    final validRows = fileData['validRows'] ?? 0;
+                    final invalidRows = fileData['invalidRows'] ?? 0;
+                    final success = fileData['success'] ?? false;
+                    final hasInfo = (invalidRows > 0) || success;
+                    return Card(
+                      margin: EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        dense: true,
+                        leading: Text(_getFileTypeIcon(fileData['fileType']), style: TextStyle(fontSize: 20)),
+                        title: Text(
+                          file.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${(file.size / 1024).toStringAsFixed(1)} KB • ${fileData['status']}'),
+                            Text('Type: ${_getFileTypeDisplayName(fileData['fileType'])} • Valid: $validRows, Invalid: $invalidRows',
+                                style: TextStyle(fontSize: 12, color: Colors.blue[600])),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasInfo)
+                              IconButton(
+                                icon: Icon(success ? Icons.info_outline : Icons.error_outline,
+                                  color: success ? Colors.blue : Colors.red,
+                                  size: 20,
+                                ),
+                                onPressed: () => _showErrorDetails(fileData),
+                                padding: EdgeInsets.zero,
+                                constraints: BoxConstraints(),
+                              ),
+                            IconButton(
+                              icon: Icon(Icons.remove_red_eye, color: Colors.blue, size: 20),
+                              onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => FilePreviewPage(file: file))
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete, color: Colors.red, size: 20),
+                              onPressed: () => _removeFile(index),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ]),
-      ),
-      SizedBox(height: 16),
-      ElevatedButton.icon(onPressed: _showFileTypeSelection, icon: Icon(Icons.add), label: Text('Add More Files'), style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white)),
-    ]);
+        ),
+        SizedBox(height: 16),
+        ElevatedButton.icon(
+          onPressed: _showFileTypeSelection,
+          icon: Icon(Icons.add, size: 18),
+          label: Text('Add More Files'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildUploadArea() {
     return GestureDetector(
       onTap: _showFileTypeSelection,
       child: Container(
-        height: 200,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.blue[300]!), boxShadow: [BoxShadow(color: Colors.blue[100]!, blurRadius: 8, offset: Offset(0, 4))]),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.cloud_upload, size: 64, color: Colors.blue[400]!),
-          SizedBox(height: 16),
-          Text("Upload Excel/CSV File", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue[700])),
-          SizedBox(height: 8),
-          Text("Click to select file type and upload", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-          SizedBox(height: 4),
-          Text("Supported formats: .xlsx, .xls, .csv, .txt", style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-        ]),
+        height: 180,
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue[300]!),
+            boxShadow: [BoxShadow(color: Colors.blue[100]!, blurRadius: 8, offset: Offset(0, 4))]
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_upload, size: 48, color: Colors.blue[400]!),
+            SizedBox(height: 12),
+            Text("Upload Excel/CSV File",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue[700])
+            ),
+            SizedBox(height: 6),
+            Text("Click to select file type and upload",
+                style: TextStyle(fontSize: 13, color: Colors.grey[600])
+            ),
+            SizedBox(height: 4),
+            Text("Supported formats: .xlsx, .xls, .csv, .txt",
+                style: TextStyle(fontSize: 11, color: Colors.grey[500])
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -871,21 +996,48 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
       child: Container(
         width: double.infinity,
         padding: EdgeInsets.all(24),
-        decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.blue[50]!, Colors.purple[50]!]), borderRadius: BorderRadius.circular(16)),
-        child: Column(children: [
-          Row(children: [
-            Icon(Icons.cloud_upload, size: 32, color: Colors.blue[700]!),
-            SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Upload Student Data', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[800])),
-              SizedBox(height: 4),
-              Text('Upload Excel or CSV files for exam results or entrance pass students', style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-            ])),
-            if (uploadedFiles.isNotEmpty) IconButton(icon: Icon(Icons.clear_all, color: Colors.red, size: 28), onPressed: _clearAllFiles),
-          ]),
-          SizedBox(height: 24),
-          uploadedFiles.isEmpty ? _buildUploadArea() : _buildFilesList(),
-        ]),
+        decoration: BoxDecoration(
+            gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Colors.blue[50]!, Colors.purple[50]!]
+            ),
+            borderRadius: BorderRadius.circular(16)
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.cloud_upload, size: 32, color: Colors.blue[700]!),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Upload Student Data',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue[800])
+                      ),
+                      SizedBox(height: 4),
+                      Text('Upload Excel or CSV files for exam results or entrance pass students',
+                          style: TextStyle(fontSize: 14, color: Colors.grey[600])
+                      ),
+                    ],
+                  ),
+                ),
+                if (uploadedFiles.isNotEmpty)
+                  IconButton(
+                      icon: Icon(Icons.clear_all, color: Colors.red, size: 28),
+                      onPressed: _clearAllFiles
+                  ),
+              ],
+            ),
+            SizedBox(height: 24),
+            Flexible(
+              child: uploadedFiles.isEmpty ? _buildUploadArea() : _buildFilesList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -895,20 +1047,37 @@ class _ExcelUploaderPageState extends State<ExcelUploader> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16),
-          child: Column(children: [
-            _buildAcademicYearCard(),
-            SizedBox(height: 20),
-            _buildUploadSection(),
-          ]),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              physics: AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildAcademicYearCard(),
+                      SizedBox(height: 20),
+                      Expanded(
+                        child: _buildUploadSection(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-// --- FilePreviewPage (unchanged) ---
+// FilePreviewPage - Completely separate class
 class FilePreviewPage extends StatefulWidget {
   final PlatformFile file;
   const FilePreviewPage({Key? key, required this.file}) : super(key: key);
@@ -962,42 +1131,37 @@ class _FilePreviewPageState extends State<FilePreviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: Colors.blue,
-          child: Row(children: [
-            IconButton(icon: Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-            SizedBox(width: 8),
-            Expanded(child: Text('Preview: ${widget.file.name}', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
-            Text('${_fileData?.length ?? 0} rows', style: TextStyle(color: Colors.white)),
-          ]),
-        ),
-        Expanded(
-          child: _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : _errorMessage.isNotEmpty
-              ? Center(child: Text("Error: $_errorMessage"))
-              : _fileData == null || _fileData!.isEmpty
-              ? Center(child: Text("No data available"))
-              : Padding(
-            padding: EdgeInsets.all(16),
-            child: Card(
-              elevation: 2,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: DataTable(
-                    columns: _fileData![0].asMap().entries.map((entry) => DataColumn(label: Expanded(child: Text(entry.value.isEmpty ? 'Column ${entry.key + 1}' : entry.value)))).toList(),
-                    rows: _fileData!.sublist(1).asMap().entries.map((entry) => DataRow(cells: entry.value.asMap().entries.map((cell) => DataCell(Text(cell.value))).toList())).toList(),
-                  ),
-                ),
+      appBar: AppBar(
+        title: Text('File Preview'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _errorMessage.isNotEmpty
+          ? Center(child: Text("Error: $_errorMessage"))
+          : _fileData == null || _fileData!.isEmpty
+          ? Center(child: Text("No data available"))
+          : Padding(
+        padding: EdgeInsets.all(16),
+        child: Card(
+          elevation: 2,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: DataTable(
+                columns: _fileData![0].asMap().entries.map((entry) =>
+                    DataColumn(label: Expanded(child: Text(entry.value.isEmpty ? 'Column ${entry.key + 1}' : entry.value)))
+                ).toList(),
+                rows: _fileData!.sublist(1).asMap().entries.map((entry) =>
+                    DataRow(cells: entry.value.asMap().entries.map((cell) => DataCell(Text(cell.value))).toList())
+                ).toList(),
               ),
             ),
           ),
         ),
-      ]),
+      ),
     );
   }
 }
