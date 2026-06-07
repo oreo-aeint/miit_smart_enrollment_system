@@ -777,7 +777,7 @@
   "savePDF": "PDF ဖိုင်သိမ်းဆည်းရန်",
   "going": "သွားနေသည်",
   "oldStudentCannotEnrollAsNew": "ကျောင်းသားဟောင်းသည် ကျောင်းသားသစ်အဖြစ် အပ်လို့မရပါ",
-  "mustBeMiitEmail": "အီးမေးလ် ဖြစ်ရမည်"
+  "mustBeMiitEmail": "အီးမေးလ် ဖြစ်ရမည်",
   "invalidEmail": "မမှန်ကန်ပါ",
   "emailRequired":"အီးမေးလ် လိုအပ်သည်",
   "search": "ရှာမည်",
@@ -789,7 +789,6 @@
   "nameDoesNotMatch": "နာမည် မကိုက်ညီပါ",
   "notFound": "ရှာမတွေ့ပါ",
   "rollNumberNotFound": "ခုံနံပါတ် မကိုက်ညီပါ"
-
 }
 
 

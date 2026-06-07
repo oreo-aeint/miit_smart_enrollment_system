@@ -1024,6 +1024,7 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       child: Row(
         children: [
           SizedBox(
+<<<<<<< Updated upstream
             width: 140,
             child: RichText(
               text: TextSpan(
@@ -1038,6 +1039,10 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
                 ],
               ),
             ),
+=======
+            width: isSmallScreen ? 90 : 100,
+            child: Text("bDate".tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+>>>>>>> Stashed changes
           ),
           Expanded(
             child: SizedBox(
@@ -1091,11 +1096,16 @@ class _NewStudentEnrollmentAppState extends State<NewStudentEnrollmentApp> {
       child: Row(
         children: [
           SizedBox(
+<<<<<<< Updated upstream
             width: 140,
             child: Text(
               "gender".tr(),
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+=======
+            width: isSmallScreen ? 90 : 100,
+            child: Text("gender".tr(), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+>>>>>>> Stashed changes
           ),
           Expanded(
             child: Row(
